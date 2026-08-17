@@ -7,7 +7,7 @@ blockers** section is empty.
 Nothing here has been invented. Where a value was unknown, the code suppresses
 the surrounding UI rather than displaying a guess.
 
-Last updated: 2026-08-17
+Last updated: 2026-08-17 (rev 2)
 
 ---
 
@@ -24,9 +24,10 @@ Last updated: 2026-08-17
 | 7 | Refund / remedy policy | `[REFUND_POLICY]` | `/integrity/` | Lawyer drafting the service agreement |
 | 8 | SMTP credentials, and one real test message received | — | `config/env.php` | Owner |
 | 9 | Legal and tax review of every published guide | — | all `/guides/` pages | Reviewers 5 and 6 |
-| 10 | Set `config/site.php` `'launched' => true`, replace `robots.txt`, run `php tools/build-sitemap.php` | — | site-wide | Owner |
+| 10 | Publish a plain statement of how pages are drafted, including what role software plays and where human and professional judgement takes over | — | `/editorial-standards/` promises this statement in a visible callout | Owner |
+| 11 | Set `config/site.php` `'launched' => true`, replace `robots.txt`, run `php tools/build-sitemap.php` | — | site-wide | Owner |
 
-**Item 9 is the real gate.** The home page states that legal and tax pages are
+**Items 9 and 10 are the real gates.** The home page states that legal and tax pages are
 held for qualified review before publication. Publishing an unreviewed guide
 would make that statement false, which is worse than publishing nothing.
 

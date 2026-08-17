@@ -194,18 +194,20 @@ return [
 
 // -------------------------------------------------------- trust & legal ----
 'integrity' => [
-    'url' => '/integrity/', 'type' => 'page', 'status' => 'planned', 'cluster' => 'trust',
+    'url' => '/integrity/', 'type' => 'page', 'status' => 'live', 'cluster' => 'trust',
     'title' => 'Our Integrity Promise | Paraguay Frontier',
     'description' => 'What we control, what we cannot control, how we present estimates, and the remedy that applies if our own work causes a problem.',
     'h1' => 'Integrity promise', 'nav_label' => 'Integrity promise',
     'intent' => 'Trust: honest limits before you engage.',
+    'last_reviewed' => '2026-08-17',
 ],
 'editorial-standards' => [
-    'url' => '/editorial-standards/', 'type' => 'page', 'status' => 'planned', 'cluster' => 'trust',
+    'url' => '/editorial-standards/', 'type' => 'page', 'status' => 'live', 'cluster' => 'trust',
     'title' => 'Editorial Standards | Paraguay Frontier',
     'description' => 'How our guides are researched, sourced, reviewed and corrected — including how to report an error and what we do when you do.',
     'h1' => 'Editorial standards', 'nav_label' => 'Editorial standards',
     'intent' => 'Trust: how the content is produced.',
+    'last_reviewed' => '2026-08-17',
 ],
 'faq' => [
     'url' => '/faq/', 'type' => 'page', 'status' => 'planned', 'cluster' => 'trust',
