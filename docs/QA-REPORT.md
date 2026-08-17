@@ -59,3 +59,31 @@ Date: 2026-08-17 · Scope: home page, shared system, all 32 routes resolving.
 - **Lighthouse scores.** LCP/CLS above are from a local PHP dev server on
   loopback, not a throttled mobile profile on real hosting.
 - **Indexing.** The site is closed to crawlers and has never been submitted.
+
+---
+
+## Second pass — `/integrity/` and `/editorial-standards/`
+
+Both pages are now written and live (still `noindex`, like the rest of the site).
+They were the highest-value gap: the home page links to both and promises what
+they contain, and until now both landed on an "in preparation" notice.
+
+| Check | Result |
+|---|---|
+| Both routes render, 200 | Pass |
+| One h1, canonical, valid JSON-LD | Pass |
+| FAQPage schema present, 4 questions, matches visible FAQs | Pass |
+| No console errors, no overflow at 390 / 1440 px | Pass |
+| `<details>` FAQ toggles by click and by keyboard | Pass |
+| QA harness across all 32 routes | 0 failures, 0 warnings |
+
+Bugs found and fixed in this pass:
+
+10. **FAQ schema crashed on multi-paragraph answers.** `strip_tags()` was called
+    on an array. Answers now accept a string or a list of paragraphs, and
+    `FAQPage` is emitted *only* when the page actually renders a visible FAQ
+    block — so markup and structured data cannot disagree.
+11. **Interior page header was centre-aligned** while every section below it was
+    left-aligned, because `max-width` sat on the `.wrap` element itself.
+
+Still not verified: live Hostinger behaviour, form delivery, legal/tax review.

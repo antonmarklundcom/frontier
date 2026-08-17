@@ -90,14 +90,25 @@ function schema_graph(array $page, array $crumbs): array
         $graph[] = $article;
     }
 
+    // FAQPage is emitted only when the page actually renders a visible FAQ
+    // block, so the markup and the structured data can never disagree.
     $faqs = $page['faqs'] ?? [];
-    if ($faqs !== []) {
+    $rendersFaq = false;
+    foreach ($page['blocks'] ?? [] as $block) {
+        if (($block['type'] ?? '') === 'faq') {
+            $rendersFaq = true;
+            break;
+        }
+    }
+    if ($faqs !== [] && $rendersFaq) {
         $entities = [];
         foreach ($faqs as $faq) {
+            // An answer may be a string or a list of paragraphs.
+            $answer = is_array($faq['a']) ? implode(' ', $faq['a']) : (string) $faq['a'];
             $entities[] = [
                 '@type' => 'Question',
                 'name'  => $faq['q'],
-                'acceptedAnswer' => ['@type' => 'Answer', 'text' => strip_tags($faq['a'])],
+                'acceptedAnswer' => ['@type' => 'Answer', 'text' => strip_tags($answer)],
             ];
         }
         $graph[] = ['@type' => 'FAQPage', '@id' => url($page['url']) . '#faq', 'mainEntity' => $entities];
