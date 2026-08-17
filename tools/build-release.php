@@ -1,115 +1,171 @@
 <?php
 /**
- * Builds the upload-ready Hostinger release.
- *   php tools/build-release.php
+ * Builds the Hostinger release zip.
+ *   php tools/build-release.php            (aborts if lint or QA fails)
+ *   php tools/build-release.php --force    (builds anyway — staging only)
  *
- * Produces release/paraguayfrontier-mvp-hostinger.zip whose ROOT is the document
- * root — no extra nesting directory. Extracting it into public_html gives you a
- * working site.
+ * The zip's root IS the document root: extracting it into public_html puts
+ * index.php at public_html/index.php, with no extra nesting level.
  *
- * Archive entries always use forward slashes. ZipArchive::addFile writes the
- * name it is given verbatim, so the path is normalised explicitly rather than
- * trusted, which is what stops "assets\css\site.css" entries appearing on a
- * Windows toolchain.
+ * What is deliberately left out:
+ *   .git/        version control
+ *   docs/        internal planning notes — no reason to sit on a web server
+ *   tools/       build scripts — same
+ *   release/     previous builds
+ *   config/site.php, config/env.php   local values and secrets; the server's
+ *                copies are authoritative and are never overwritten by a deploy
+ * The two .example.php files DO ship: bootstrap.php falls back to
+ * site.example.php, so a first upload renders rather than fatals.
  */
+
 declare(strict_types=1);
 
-$root    = dirname(__DIR__);
-$outDir  = $root . '/release';
-$outFile = $outDir . '/paraguayfrontier-mvp-hostinger.zip';
+$force = in_array('--force', $argv, true);
+$root  = dirname(__DIR__);
 
-/**
- * Excluded from the release:
- *  .git       — history has no business on a web host
- *  release    — no recursive packaging
- *  docs       — internal working notes; .htaccess blocks them, but a host that
- *               ignores .htaccess would expose the production-data checklist
- *  config/site.php, config/env.php — server-owned. They must survive a
- *               redeploy, so the release never carries them. Only the .example
- *               files ship; app/bootstrap.php falls back to the example when
- *               site.php is absent, so the site runs before you configure it.
- */
-$excludeDirs  = ['.git', 'release', 'docs'];
-$excludeFiles = ['config/site.php', 'config/env.php', '.gitignore'];
+// ---------------------------------------------------------------- pre-flight
+echo "== Syntax ==\n";
+$lintErrors = [];
+$phpFiles   = [];
+$it = new RecursiveIteratorIterator(
+    new RecursiveCallbackFilterIterator(
+        new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
+        function ($file) {
+            $name = $file->getFilename();
+            return !in_array($name, ['.git', 'release'], true);
+        }
+    )
+);
+foreach ($it as $file) {
+    if ($file->isFile() && $file->getExtension() === 'php') {
+        $phpFiles[] = $file->getPathname();
+    }
+}
+sort($phpFiles);
+foreach ($phpFiles as $f) {
+    exec('php -l ' . escapeshellarg($f) . ' 2>&1', $out, $code);
+    if ($code !== 0) { $lintErrors[] = $f . ': ' . implode(' ', $out); }
+    $out = [];
+}
+if ($lintErrors) {
+    foreach ($lintErrors as $e) { echo "  FAIL  $e\n"; }
+} else {
+    printf("  ok    %d PHP files parse\n", count($phpFiles));
+}
 
-@mkdir($outDir, 0755, true);
-@unlink($outFile);
+echo "\n== QA ==\n";
+exec('php ' . escapeshellarg($root . '/tools/qa.php') . ' 2>&1', $qaOut, $qaCode);
+foreach ($qaOut as $line) {
+    if (str_contains($line, 'FAIL') || preg_match('/failure\(s\)/', $line)) { echo "  $line\n"; }
+}
+echo $qaCode === 0 ? "  ok    QA passed\n" : "  FAIL  QA exited $qaCode\n";
 
-$zip = new ZipArchive();
-if ($zip->open($outFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-    fwrite(STDERR, "Could not create {$outFile}\n");
+if (($lintErrors || $qaCode !== 0) && !$force) {
+    echo "\nRelease NOT built. Fix the failures above, or pass --force for a staging build.\n";
     exit(1);
 }
-
-$it = new RecursiveIteratorIterator(
-    new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
-    RecursiveIteratorIterator::SELF_FIRST
-);
-
-$count = 0;
-$bytes = 0;
-foreach ($it as $path) {
-    $rel = str_replace('\\', '/', substr((string) $path, strlen($root) + 1));
-
-    $top = explode('/', $rel)[0];
-    if (in_array($top, $excludeDirs, true)) {
-        continue;
-    }
-    if (in_array($rel, $excludeFiles, true)) {
-        continue;
-    }
-    if (is_dir((string) $path)) {
-        $zip->addEmptyDir($rel);
-        continue;
-    }
-    $zip->addFile((string) $path, $rel);
-    $count++;
-    $bytes += (int) filesize((string) $path);
+if (($lintErrors || $qaCode !== 0) && $force) {
+    echo "\n  !!    building anyway (--force). Do not put this build on the live domain.\n";
 }
 
+// ------------------------------------------------------------------ contents
+$skipTop  = ['.git', '.gitignore', 'docs', 'tools', 'release'];
+$skipFile = ['config/site.php', 'config/env.php', '.DS_Store'];
+
+$files = [];
+$walk = function (string $dir, string $prefix = '') use (&$walk, &$files, $root, $skipTop, $skipFile) {
+    foreach (scandir($dir) as $entry) {
+        if ($entry === '.' || $entry === '..') { continue; }
+        $abs = $dir . '/' . $entry;
+        $rel = $prefix === '' ? $entry : $prefix . '/' . $entry;
+        if ($prefix === '' && in_array($entry, $skipTop, true)) { continue; }
+        if (in_array($rel, $skipFile, true) || $entry === '.DS_Store') { continue; }
+        if (str_ends_with($entry, '.log')) { continue; }
+        is_dir($abs) ? $walk($abs, $rel) : $files[] = $rel;
+    }
+};
+$walk($root);
+sort($files);
+
+// -------------------------------------------------------------------- the zip
+$releaseDir = $root . '/release';
+if (!is_dir($releaseDir)) { mkdir($releaseDir, 0775, true); }
+$stamp = date('Y-m-d-Hi');
+$zipPath = $releaseDir . "/paraguayfrontier-{$stamp}.zip";
+
+$zip = new ZipArchive();
+if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+    fwrite(STDERR, "Could not create $zipPath\n");
+    exit(1);
+}
+$bytes = 0;
+foreach ($files as $rel) {
+    $zip->addFile($root . '/' . $rel, $rel);
+    $bytes += filesize($root . '/' . $rel);
+}
 $zip->close();
 
-printf("%s\n  %d files, %.1f KB uncompressed, %.1f KB archived\n",
-    $outFile, $count, $bytes / 1024, filesize($outFile) / 1024);
+echo "\n== Release ==\n";
+printf("  %s\n", $zipPath);
+printf("  %d files, %s uncompressed, %s zipped\n",
+    count($files),
+    number_format($bytes / 1024, 0) . ' KB',
+    number_format(filesize($zipPath) / 1024, 0) . ' KB');
+echo "  zip root = document root: unzip into public_html, no nested folder\n";
 
-// --- Verify what we just wrote ------------------------------------------------
+// ------------------------------------------------- verify what was just written
+// The archive is read back rather than trusted. ZipArchive::addFile writes the
+// entry name verbatim, so a Windows toolchain can produce "assets\css\site.css"
+// entries that extract into one file with a backslash in its name.
 $check = new ZipArchive();
-$check->open($outFile);
+$check->open($zipPath);
 $names = [];
-for ($i = 0; $i < $check->numFiles; $i++) {
-    $names[] = $check->getNameIndex($i);
-}
+for ($i = 0; $i < $check->numFiles; $i++) { $names[] = $check->getNameIndex($i); }
 $check->close();
 
 $problems = [];
 foreach ($names as $n) {
-    if (str_contains($n, '\\')) {
-        $problems[] = "backslash in entry: {$n}";
+    if (str_contains($n, '\\')) { $problems[] = "backslash in entry: $n"; }
+    if (str_starts_with($n, 'docs/') || str_starts_with($n, 'tools/')
+        || $n === 'config/site.php' || $n === 'config/env.php') {
+        $problems[] = "must not ship: $n";
     }
 }
-foreach (['index.php', '.htaccess', 'robots.txt', 'sitemap.xml', 'manifest.webmanifest'] as $required) {
-    if (!in_array($required, $names, true)) {
-        $problems[] = "missing at archive root: {$required}";
-    }
+$required = [
+    'index.php', '.htaccess', 'robots.txt', 'sitemap.xml', 'manifest.webmanifest',
+    'assets/css/site.css', 'assets/js/site.js', 'app/bootstrap.php',
+    'config/site.example.php', 'guides/residency/index.php',
+    'services/residency/index.php', 'errors/404/index.php',
+];
+foreach ($required as $r) {
+    if (!in_array($r, $names, true)) { $problems[] = "missing: $r"; }
 }
-foreach (['assets/css/site.css', 'assets/js/site.js', 'app/bootstrap.php',
-          'config/site.example.php', 'guides/residency/index.php',
-          'services/residency/index.php', 'errors/404/index.php'] as $required) {
-    if (!in_array($required, $names, true)) {
-        $problems[] = "missing: {$required}";
-    }
-}
-foreach ($names as $n) {
-    if (str_starts_with($n, 'docs/') || $n === 'config/site.php' || $n === 'config/env.php') {
-        $problems[] = "should not be in the release: {$n}";
-    }
-}
-
 if ($problems) {
-    echo "\nARCHIVE PROBLEMS:\n";
-    foreach ($problems as $p) {
-        echo "  - {$p}\n";
-    }
+    echo "\nARCHIVE PROBLEMS — do not upload this file:\n";
+    foreach ($problems as $p) { echo "  - $p\n"; }
+    unlink($zipPath);
     exit(1);
 }
-echo "  verified: forward slashes only, document root at archive root, no docs or server config included\n";
+echo "  verified: forward slashes only, every required file present, no docs,\n";
+echo "            no tools, no server-owned config\n";
+
+// -------------------------------------------------------- post-build reminder
+require $root . '/app/bootstrap.php';
+$site = $GLOBALS['PF_SITE'];
+$open = [];
+foreach ($site as $k => $v) {
+    if (is_string($v) && is_placeholder($v)) { $open[] = $k; }
+}
+
+echo "\n== State of this build ==\n";
+printf("  config source   : %s\n", is_file($root . '/config/site.php') ? 'config/site.php' : 'config/site.example.php (no local site.php)');
+printf("  launched flag   : %s\n", !empty($site['launched']) ? 'true — indexable' : 'false — noindex,nofollow site-wide');
+printf("  robots.txt      : %s\n", str_contains(file_get_contents($root . '/robots.txt'), "\nDisallow: /") ? 'Disallow: / (closed to crawlers)' : 'open to crawlers');
+if ($open) {
+    printf("  unresolved      : %s\n", implode(', ', $open));
+    echo "  Contact surfaces tied to those values are suppressed, not rendered.\n";
+    echo "  See docs/PRODUCTION-DATA-REQUIRED.md.\n";
+} else {
+    echo "  unresolved      : none\n";
+}
+echo "\nNext: docs/HOSTINGER-DEPLOYMENT.md\n";

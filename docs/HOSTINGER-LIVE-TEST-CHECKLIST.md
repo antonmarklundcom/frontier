@@ -20,6 +20,18 @@ Tested on: ______________  By: ______________
 
 ## B. `.htaccess` — the part most likely to differ from local
 
+Most of this section is automated. Run it first and only hand-check what it does
+not cover:
+
+```bash
+php tools/smoke-test.php https://paraguayfrontier.com
+```
+
+It requests every route, fails on any placeholder that reached a visitor, and
+probes the deny and redirect rules — enforcing them only when Apache or
+LiteSpeed is answering. The `Cache-Control`, `Content-Encoding` and www-redirect
+lines below are still yours to check by hand.
+
 - [ ] `http://paraguayfrontier.com/` redirects to `https://` (301)
 - [ ] `https://www.paraguayfrontier.com/` redirects to the non-www host (301)
 - [ ] `/guides/residency` (no trailing slash) redirects to `/guides/residency/`

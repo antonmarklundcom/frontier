@@ -84,7 +84,21 @@ find . -name '*.php' -not -path './release/*' -exec php -l {} \;
 
 ## Deployment
 
-See `docs/HOSTINGER-DEPLOYMENT.md` (written in the next phase). The release is a
-zip whose root is the document root — `index.php`, `.htaccess`, `assets/`,
-`app/`, `config/` and the route directories — extracted directly into
-`public_html`, with no extra nesting level.
+```bash
+php tools/build-release.php                       # lints, runs QA, writes release/*.zip
+php tools/smoke-test.php https://your-host.tld    # after uploading
+```
+
+`build-release.php` refuses to build if `php -l` or `tools/qa.php` fails. The
+zip's root is the document root — `index.php`, `.htaccess`, `assets/`, `app/`,
+the `config/*.example.php` files and the route directories — extracted directly
+into `public_html`, with no extra nesting level. `docs/`, `tools/`, `.git/` and
+the real `config/site.php` / `config/env.php` are excluded, so a deploy can
+never overwrite the server's own values or ship a credential.
+
+`smoke-test.php` requests every registered URL over HTTP, checks that no
+placeholder reached a visitor, and probes the `.htaccess` rules — the only way
+to verify them, since PHP's built-in server ignores `.htaccess`.
+
+Full procedure, including the Hostinger panel settings and the go-live order:
+`docs/HOSTINGER-DEPLOYMENT.md`.

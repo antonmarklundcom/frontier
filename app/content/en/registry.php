@@ -239,13 +239,13 @@ return [
     'h1' => 'Message received', 'intent' => 'Post-submission confirmation.',
 ],
 'error-404' => [
-    'url' => '/404/', 'type' => 'page', 'status' => 'planned', 'cluster' => 'utility', 'index' => false,
+    'url' => '/errors/404/', 'type' => 'page', 'status' => 'planned', 'cluster' => 'utility', 'index' => false,
     'title' => 'Page Not Found | Paraguay Frontier',
     'description' => 'That page does not exist.',
     'h1' => 'That page does not exist', 'intent' => 'Error recovery.',
 ],
 'error-500' => [
-    'url' => '/500/', 'type' => 'page', 'status' => 'planned', 'cluster' => 'utility', 'index' => false,
+    'url' => '/errors/500/', 'type' => 'page', 'status' => 'planned', 'cluster' => 'utility', 'index' => false,
     'title' => 'Something Went Wrong | Paraguay Frontier',
     'description' => 'A server error occurred.',
     'h1' => 'Something went wrong', 'intent' => 'Error recovery.',

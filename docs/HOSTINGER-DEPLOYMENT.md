@@ -1,134 +1,204 @@
-# Hostinger deployment
+# Deploying Paraguay Frontier to Hostinger
 
-The release is a zip whose **root is the document root**. There is no wrapper
-directory: extracting it inside `public_html` puts `index.php` directly at
-`public_html/index.php`. That is deliberate — a nested folder is the most common
-way a PHP upload ends up serving a directory listing instead of a site.
+No build step, no database, no Node, no Composer. The release is a zip whose
+root is the document root: it extracts straight into `public_html`.
 
-Build it with:
+Two deployments are described, and they are not the same event:
 
-```bash
-php tools/build-release.php
-# -> release/paraguayfrontier-mvp-hostinger.zip
-```
-
-The build script verifies its own output and exits non-zero if the archive has
-backslash paths, is missing a root-level file, or has picked up `docs/` or a
-server-owned config file.
+- **Staging** — a subdomain, closed to crawlers, done today. This is the only
+  way to verify the `.htaccess` rules, because PHP's built-in server ignores
+  `.htaccess` entirely and nothing on a laptop can prove those rules work.
+- **Launch** — the live domain, open to crawlers. Blocked until
+  `PRODUCTION-DATA-REQUIRED.md` is cleared. See "Going live" at the end.
 
 ---
 
-## 1. Check the PHP version first
+## 1. Build the release
 
-In hPanel, open the PHP configuration for the domain and confirm **PHP 8.1 or
-newer**. The code uses `str_contains`, `str_starts_with` and typed properties,
-so 8.0 and below will fatal on the first request.
-
-While you are there, confirm `mod_rewrite` and `mod_headers` are available. On
-Hostinger's shared Apache they normally are, but every directive in `.htaccess`
-is wrapped in `<IfModule>` so a missing module degrades rather than 500s. The
-one exception is `ErrorDocument`, which is unconditional and standard.
-
-## 2. Upload and extract
-
-1. hPanel → File Manager → open `public_html`.
-2. Delete any default `index.html` or parking page already there.
-3. Upload `paraguayfrontier-mvp-hostinger.zip`.
-4. Extract **into `public_html` itself**, not into a subfolder.
-5. Confirm `public_html/index.php` and `public_html/app/bootstrap.php` exist. If
-   you see `public_html/paraguayfrontier-mvp-hostinger/index.php`, the extract
-   nested — move the contents up one level.
-6. Delete the zip from the server.
-
-SFTP works equally well; the only thing that matters is where `index.php` lands.
-
-## 3. Create the server-owned config
-
-The release ships `config/site.example.php` but **not** `config/site.php`. That
-is intentional: your live configuration must survive a redeploy, so the release
-never overwrites it.
-
-Copy `config/site.example.php` to `config/site.php` and fill in:
-
-```php
-'email'        => 'you@paraguayfrontier.com',
-'whatsapp'     => '595XXXXXXXXX',   // E.164 digits only, no + and no spaces
-'calendar_url' => 'https://...',
-'launched'     => false,            // keep false until the checklist is clear
+```bash
+php tools/build-release.php
 ```
 
-Until you do, the site still runs — `app/bootstrap.php` falls back to the
-example file — but every contact surface stays hidden, because the code
-suppresses UI that depends on an unresolved `[PLACEHOLDER]` rather than
-rendering the placeholder to a visitor.
+It refuses to build if `php -l` or `tools/qa.php` fails. On success it writes
+`release/paraguayfrontier-YYYY-MM-DD-HHMM.zip` and prints the state of the
+build — which config file it read, whether `launched` is set, and which
+placeholders are still open.
+
+What ships: `index.php`, `.htaccess`, `robots.txt`, `sitemap.xml`,
+`manifest.webmanifest`, `assets/`, `app/`, the route directories, and the two
+`config/*.example.php` files.
+
+What does not: `.git/`, `docs/`, `tools/`, and — deliberately —
+`config/site.php` and `config/env.php`. Your real values live on the server
+only. A deploy therefore can never overwrite them with local ones, and a
+credential can never reach the repository by way of a release zip.
+
+## 2. Hostinger setup
+
+In hPanel, for the target domain or subdomain:
+
+1. **PHP version** — Advanced → PHP Configuration → **8.1 or newer**. The code
+   uses `str_contains`, `str_starts_with`, typed properties and `?->`; on PHP
+   7.x it fatals on the first request.
+2. **PHP options** — `display_errors` **off**. An error must reach the log, not
+   a prospect. `/errors/500/` is the page they should see instead.
+3. **SSL** — issue the free certificate and turn on Force HTTPS. The
+   `.htaccess` also forces HTTPS; both on is correct, and the rule is written to
+   respect `X-Forwarded-Proto` so it cannot loop behind Hostinger's proxy.
+4. For staging, create a subdomain (e.g. `staging.paraguayfrontier.com`). It
+   gets its own `public_html`. Keep the site's `robots.txt` as-is there — it
+   already says `Disallow: /`.
+
+While you are in the panel, confirm `mod_rewrite` and `mod_headers` are
+available. Every directive in `.htaccess` is wrapped in `<IfModule>` so a
+missing module degrades rather than 500s — but it degrades silently, which is
+why section 5 checks the result rather than the configuration.
+
+## 3. Upload
+
+hPanel → File Manager → open `public_html` → delete any default `index.html` or
+parking page already sitting there → Upload the zip → right-click → Extract →
+**into the current directory**. Delete the zip from the server afterwards.
+
+SFTP works equally well. The only thing that matters is where `index.php` lands.
+
+Afterwards `public_html/index.php` must exist. If you instead have
+`public_html/paraguayfrontier-2026-.../index.php`, the extract added a folder
+level: move the contents up one and delete the empty folder. Every path in the
+site is absolute from the document root, so an extra level breaks everything at
+once, in an obvious way.
+
+Confirm `.htaccess` came across. File Manager hides dotfiles by default —
+Settings → Show hidden files. A missing `.htaccess` is the single most common
+cause of "the home page works but every other page 404s".
+
+## 4. Create `config/site.php` on the server
+
+The site runs without it (`bootstrap.php` falls back to `site.example.php`), but
+then every contact surface stays suppressed. Copy `config/site.example.php` to
+`config/site.php` in File Manager and fill in what you have. Values still
+written as `[LIKE_THIS]` are treated as unknown and the UI that depends on them
+is omitted rather than shown with a placeholder in it.
+
+The values that change the site's character, and exactly what each one switches
+on **today**:
+
+| Key | Format | Filling it in does this |
+|---|---|---|
+| `whatsapp` | E.164 digits only, `595991234567` | renders the WhatsApp link in the footer and in every consultation CTA block. Currently zero WhatsApp links exist on any page. |
+| `email` | `you@paraguayfrontier.com` | renders the footer email link, and adds `email` to the Organization schema. Currently zero `mailto:` links exist. |
+| `calendar_url` | full `https://` URL | nothing yet — no template reads it. It is stored for `/book-consultation/`, which still has to be written as a content file. |
+| `address`, `company_reg`, `founder` | plain strings | nothing yet — no template reads them. They are wired into the schema and footer when those pages are written. |
+
+So two values — `whatsapp` and `email` — are what actually take the site from
+"no way to contact anyone" to "contactable on every page". The booking page is a
+content-writing job, not a config job.
+
+Leave `'launched' => false` until section 7.
 
 Never put SMTP or CRM credentials in `config/site.php`. Those belong in
-`config/env.php`, created from `config/env.example.php`, which is excluded from
-every release for the same reason.
+`config/env.php`, created from `config/env.example.php` on the server, with
+permissions `600` if File Manager lets you set them. It is excluded from every
+release for the same reason `site.php` is.
 
-## 4. Verify includes and the deny rules
+When the consultation form is built, use **authenticated SMTP** from that file,
+not PHP `mail()` — on shared hosting `mail()` fails SPF/DKIM alignment and lands
+in spam. And do not describe the form as working until a real message has
+arrived in the destination inbox. A 200 from the handler is not delivery.
 
-Load the home page. Raw PHP source means the host is not executing PHP for that
-directory. A working page with no styling means the CSS path is wrong — check
-that `public_html/assets/css/site.css` exists.
+## 5. Verify the deploy
 
-Then run the two checks that catch `.htaccess` problems:
+From your machine, against the uploaded site:
 
-- `https://paraguayfrontier.com/app/bootstrap.php` → must return **403**
-- `https://paraguayfrontier.com/config/site.php` → must return **403**
+```bash
+php tools/smoke-test.php https://staging.paraguayfrontier.com
+```
 
-If either returns 200 or a blank page, the deny rule is not applying. Fix that
-before going further — those files are not secret today, but `config/env.php`
-will hold credentials.
+It requests all 32 registered URLs, then probes the `.htaccess` rules. It
+detects Apache/LiteSpeed and only enforces the rewrite checks when a server that
+honours `.htaccess` is actually answering — which is why running it against
+`php -S` locally reports those lines as `skip`.
 
-## 5. Email delivery
+Expected on a correct deploy, all green:
 
-Not configured yet, and the consultation form is not built yet either. When it
-is: use **authenticated SMTP** with credentials in `config/env.php`, not PHP
-`mail()`, which on shared hosting fails SPF/DKIM and lands in spam.
+- every route `200`, except `/errors/404/` → `404` and `/errors/500/` → `500`
+  (deliberate: an error document that answers `200` is worse than none)
+- no `[PLACEHOLDER]` string anywhere in any rendered page
+- `/about` → `301` to `/about/`
+- `/app/bootstrap.php` and `/config/site.example.php` → `403`
+- `http://` → `301` to `https://`
+- `X-Content-Type-Options`, `Referrer-Policy`, `Content-Security-Policy`,
+  `X-Frame-Options` all present on `/`
 
-**Do not describe the form as working until a real message has arrived in the
-destination inbox.** A 200 response from the handler is not delivery.
+The script covers section B of `HOSTINGER-LIVE-TEST-CHECKLIST.md` and nothing
+else. Work through the rest of that checklist by hand on a real phone — layout,
+fonts, the mobile menu, the process panel, PageSpeed on the live host. That is
+the part no script covers, and the reason staging exists.
 
-## 6. Going live (not yet)
+### If something is wrong
 
-All of these happen together, in this order:
+| Symptom | Cause | Fix |
+|---|---|---|
+| Home page fine, all other routes 404 | `.htaccess` missing or dotfiles hidden | re-upload `.htaccess` |
+| Every page is a blank white screen | PHP < 8.1, or a fatal with `display_errors` off | switch PHP version; read the error log in hPanel |
+| Raw PHP source displayed | PHP handler not applied to the directory | check the domain is mapped to this `public_html` |
+| `403` on legitimate pages | over-broad deny rule, or wrong ownership on extract | check file permissions are 644 / directories 755 |
+| CSP header missing | `mod_headers` unavailable | Hostinger's LiteSpeed supports it; confirm the `.htaccess` uploaded whole |
+| Redirect loop on HTTPS | Force HTTPS in hPanel fighting rule 1 | leave both on; if it loops, turn off hPanel's and keep the `.htaccess` rule |
 
-1. Clear every item in `docs/PRODUCTION-DATA-REQUIRED.md`.
-2. Set `'launched' => true` in `config/site.php`.
-3. Replace `robots.txt` with the block commented at the bottom of the current
-   file — the `Allow: /` version with the sitemap line.
-4. Run `php tools/build-sitemap.php` locally and upload the regenerated
-   `sitemap.xml`. It stays empty while `launched` is false, so regenerating it
-   is not optional.
-5. Verify the domain in Google Search Console **by DNS TXT record**, not an HTML
-   file or meta tag. TXT survives redeploys.
-6. Submit `https://paraguayfrontier.com/sitemap.xml`.
-7. Spot-check three live pages for `<meta name="robots" content="index,follow`.
+## 6. Redeploying and rolling back
+
+Rebuild, upload, extract over the top, overwrite when prompted. `config/site.php`
+and `config/env.php` are not in the zip, so they survive untouched. Delete stale
+files by hand if a route is ever removed from the registry — extraction adds and
+overwrites, it never deletes.
+
+Keep the previous zip. Rolling back is re-extracting it over the top: every file
+it contains is overwritten wholesale, and your server-owned config survives
+automatically because no release has ever contained it. Clear the LiteSpeed
+cache if it is enabled.
+
+## 7. Going live
+
+Do not do any of this while `docs/PRODUCTION-DATA-REQUIRED.md` still has open
+launch blockers. The order matters:
+
+1. Fill in `config/site.php` completely — no `[PLACEHOLDER]` values left.
+2. Set `'launched' => true`.
+3. Replace `robots.txt` with the open version written in the comment at the
+   bottom of that file.
+4. `php tools/build-sitemap.php` — it lists only pages that have real content
+   files, so unwritten routes stay out of it.
+5. `php tools/qa.php` — it must report 0 failures with `launched` true.
+6. Rebuild, upload, and run `smoke-test.php` against the live domain. The
+   "home page is INDEXABLE" note is now the one you want to see.
+7. Google Search Console: verify the domain **by DNS TXT record**, not an HTML
+   file or a meta tag — TXT survives every redeploy. Then submit
+   `https://paraguayfrontier.com/sitemap.xml`.
+8. Spot-check three live pages for `<meta name="robots" content="index,follow`.
 
 Step 3 is the one people forget, and forgetting it is the most common reason a
 finished site never ranks.
 
-## 7. Rolling back
-
-Keep the previous release zip. To roll back, re-extract it over the top — every
-file it contains is overwritten wholesale. `config/site.php` and
-`config/env.php` are untouched by any release, so your configuration survives
-the rollback automatically. Clear the LiteSpeed cache if it is enabled; asset
-URLs are cache-busted by file mtime, which usually makes that unnecessary.
+A partial launch is legitimate and is the fastest honest route to a site that
+earns: publish `/`, `/integrity/`, `/editorial-standards/` and a working
+`/book-consultation/`, and leave the guides unwritten. Pages with no content
+file render the "in preparation" page and stay `noindex` and out of the sitemap
+on their own — no configuration needed, and nothing unreviewed gets indexed.
 
 ## 8. What has not been tested
 
 Nothing in this document has been executed against a real Hostinger account. The
-release zip has been built, extracted and served successfully on a local PHP 8.4
-server, which proves the archive structure and the application, but **not**:
+release zip has been built, verified and served from a clean extraction on a
+local PHP 8.4 server — all 32 routes answer, no placeholder reaches a visitor.
+That proves the archive and the application. It does not prove:
 
-- whether Hostinger's Apache honours these specific `.htaccess` directives
+- whether Hostinger's server honours these specific `.htaccess` directives
 - the HTTPS and non-www redirects
 - the `ErrorDocument` mappings
 - compression and cache headers
 - SMTP delivery
 
-Work through `docs/HOSTINGER-LIVE-TEST-CHECKLIST.md` on the live host. Until it
-is complete, the correct description of this project is "packaged for
-Hostinger", not "deployed".
+`tools/smoke-test.php` exists to settle the first four in one command, the first
+time this is uploaded anywhere. Until it has been run against the live host, the
+honest description of this project is "packaged for Hostinger", not "deployed".
