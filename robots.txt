@@ -1,0 +1,15 @@
+# Paraguay Frontier — pre-launch.
+# The site carries unresolved production placeholders and unreviewed legal/tax
+# content, so it is closed to crawlers. Switching this on is a line item in
+# docs/PRODUCTION-DATA-REQUIRED.md and must be done together with
+# config/site.php 'launched' => true.
+
+User-agent: *
+Disallow: /
+
+# On launch, replace everything above with:
+# User-agent: *
+# Allow: /
+# Disallow: /thank-you/
+# Disallow: /errors/
+# Sitemap: https://paraguayfrontier.com/sitemap.xml

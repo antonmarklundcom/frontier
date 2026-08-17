@@ -1,0 +1,12 @@
+{
+  "name": "Paraguay Frontier",
+  "short_name": "PY Frontier",
+  "description": "Residency, tax registration and banking preparation in Paraguay.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#F3F5F2",
+  "theme_color": "#081D24",
+  "icons": [
+    { "src": "/assets/images/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

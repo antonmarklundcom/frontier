@@ -1,0 +1,5 @@
+config/site.php
+config/env.php
+/release/
+.DS_Store
+*.log
