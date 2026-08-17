@@ -113,7 +113,8 @@ function unwritten(mixed $value): bool
  */
 function preview_mode(): bool
 {
-    return (bool) site('preview_drafts') && !site('launched');
+    $on = (bool) site('preview_drafts') || (bool) getenv('PF_PREVIEW');
+    return $on && !site('launched');
 }
 
 /**

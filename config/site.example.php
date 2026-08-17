@@ -19,9 +19,12 @@ return [
 
     // Render draft outlines (structure written, copy not yet) instead of the
     // "in preparation" notice, so an author can read a page in its real layout
-    // with every unwritten passage marked. Forced off whenever 'launched' is
-    // true — a visitor must never reach a page full of editorial briefs.
-    'preview_drafts' => true,
+    // with every unwritten passage marked. Off here on purpose: this example
+    // file is the fallback config a server with no config/site.php would load,
+    // and a visitor must never reach a page full of editorial briefs. Turn it
+    // on for one local session instead:  PF_PREVIEW=1 php -S 127.0.0.1:8080 -t .
+    // It is forced off whenever 'launched' is true, whatever this says.
+    'preview_drafts' => false,
 
     // --- Contact. Displayed only when the value is not a [PLACEHOLDER]. -------
     'email'         => '[BUSINESS_EMAIL]',

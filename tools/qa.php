@@ -46,9 +46,19 @@ foreach ($reg as $id => $p) {
 $fail === 0 && ok('every entry has url/title/description/h1/type/status/intent');
 
 echo "\n== Rendered output ==\n";
+// Render as a visitor would see the site, whatever the local preview setting
+// is: an author's preview flag must never be able to hide a leak from QA.
+$GLOBALS['PF_SITE']['preview_drafts'] = false;
+putenv('PF_PREVIEW=');
 $blockTypes = [];
 foreach ($reg as $id => $p) {
     ob_start(); render_page($id); $html = ob_get_clean();
+
+    // An unwritten editorial brief must never reach a visitor, in either the
+    // raw {{ ... }} form or the ⟦ ... ⟧ form preview renders it as.
+    if (str_contains($html, '{{') || str_contains($html, '⟦')) {
+        bad("$id leaks an unwritten copy brief into visitor-facing HTML");
+    }
 
     $h1 = preg_match_all('/<h1[\s>]/', $html);
     if ($h1 !== 1) { bad("$id has $h1 h1 elements (need exactly 1)"); }
@@ -76,15 +86,93 @@ foreach ($reg as $id => $p) {
 }
 ok('rendered ' . count($reg) . ' pages: one h1, canonical, valid JSON-LD, no dead internal links, no leaked placeholders');
 
-echo "\n== Block coverage ==\n";
-$home = require PF_APP . '/content/en/pages/home.php';
-foreach ($home['blocks'] as $b) {
-    $f = PF_APP . '/templates/blocks/' . $b['type'] . '.php';
-    is_file($f) ? $blockTypes[] = $b['type'] : bad("home uses undefined block type '{$b['type']}'");
+echo "\n== Draft integrity ==\n";
+// The registry's 'status' is documentation; resolve_page() is the authority.
+// They must agree, or the registry is lying about what is publishable.
+$states = ['live' => 0, 'draft' => 0, 'planned' => 0];
+$slotTotal = 0;
+foreach ($reg as $id => $p) {
+    $r = resolve_page($id);
+    $real = $r['page']['status'];
+    $states[$real] = ($states[$real] ?? 0) + 1;
+    $slotTotal += count($r['slots']);
+    if ($real !== $p['status']) {
+        bad("registry says $id is '{$p['status']}' but its content file makes it '$real'");
+    }
+    if ($real !== 'live' && is_indexable($r['page'])) {
+        bad("$id is '$real' but would be indexed");
+    }
 }
-ok('home uses ' . count(array_unique($blockTypes)) . ' distinct block types: ' . implode(', ', array_unique($blockTypes)));
+ok(sprintf('%d live, %d draft, %d planned; %d unwritten passages (php tools/copy-brief.php)',
+    $states['live'], $states['draft'], $states['planned'], $slotTotal));
+
+echo "\n== Block coverage ==\n";
+// Every block type used anywhere must have a template, and every page a block
+// references by id must exist — a typo in either is a fatal render, not a
+// cosmetic bug, so it is caught here rather than by a visitor.
+$used = [];
+// Only the members of a page's 'blocks' array are blocks. 'type' also appears
+// inside prose bodies ('list', 'defs', 'h3'), which the prose template handles
+// itself and which have no template file of their own.
+$walk = function ($node, string $pageId) use (&$walk, &$reg) {
+    if (!is_array($node)) { return; }
+    foreach ($node as $k => $v) {
+        if ($k === 'page' && is_string($v) && !isset($reg[$v])) {
+            bad("$pageId links to unknown page id '$v'");
+        }
+        $walk($v, $pageId);
+    }
+};
+foreach ($reg as $id => $p) {
+    $file = PF_APP . '/content/en/pages/' . str_replace('.', '-', $id) . '.php';
+    if (!is_file($file)) { continue; }
+    $content = require $file;
+    foreach ($content['blocks'] ?? [] as $b) {
+        if (isset($b['type']) && is_string($b['type'])) { $used[$b['type']] = true; }
+    }
+    $walk($content['blocks'] ?? [], $id);
+}
+foreach (array_keys($used) as $type) {
+    if (!is_file(PF_APP . '/templates/blocks/' . $type . '.php')) {
+        bad("undefined block type '$type' is used by a content file");
+    }
+}
+$defined = array_map(fn($f) => basename($f, '.php'), glob(PF_APP . '/templates/blocks/*.php'));
+$unused  = array_diff($defined, array_keys($used), ['in-preparation', 'draft-notice']);
+if ($unused) { soft('block templates defined but never used: ' . implode(', ', $unused)); }
+ok(count($used) . ' block types in use, all defined, all page references resolve');
+
+echo "\n== Draft preview ==\n";
+// Authors read drafts with PF_PREVIEW=1. That path renders block templates
+// against unwritten values, so it has to be exercised: a template that only
+// breaks on a draft page would otherwise be found by the writer, mid-sentence.
+$GLOBALS['PF_SITE']['preview_drafts'] = true;
+$previewed = 0;
+foreach ($reg as $id => $p) {
+    if (resolve_page($id)['page']['status'] !== 'draft') { continue; }
+    ob_start(); render_page($id); $out = ob_get_clean();
+    $previewed++;
+    if (preg_match_all('/<h1[\s>]/', $out) !== 1) { bad("$id renders " . preg_match_all('/<h1[\s>]/', $out) . " h1 elements in preview"); }
+    if (!str_contains($out, 'draftbar')) { bad("$id renders in preview without the draft banner"); }
+}
+$GLOBALS['PF_SITE']['preview_drafts'] = false;
+ok("$previewed draft outlines render cleanly under PF_PREVIEW=1");
+
+echo "\n== Enquiry form ==\n";
+// The form must be inert until delivery is configured, and its handler must
+// never be reachable without the token, the stamp and the honeypot.
+form_enabled()
+    ? soft('the enquiry form is accepting submissions — confirm a real message has been received')
+    : ok('the enquiry form renders disabled (no SMTP delivery configured yet)');
+$formSrc = file_get_contents(PF_APP . '/form.php');
+foreach (['csrf' => 'hash_equals', 'honeypot' => 'company_website', 'timing' => 'PF_FORM_MIN_SECONDS',
+          'rate limit' => 'rate_limited', 'redirect' => '303'] as $label => $needle) {
+    str_contains($formSrc, $needle) ? null : bad("form handler lost its $label check");
+}
+ok('handler retains: CSRF token, honeypot, minimum completion time, rate limit, POST-redirect-GET');
 
 echo "\n== Rail integrity ==\n";
+$home = require PF_APP . '/content/en/pages/home.php';
 ob_start(); render_page('home'); $html = ob_get_clean();
 foreach ($home['rail'] as $stop) {
     if (!str_contains($html, 'id="' . $stop['target'] . '"')) { bad("rail stop '{$stop['target']}' has no matching section id"); }

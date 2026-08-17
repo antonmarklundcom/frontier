@@ -7,7 +7,8 @@ blockers** section is empty.
 Nothing here has been invented. Where a value was unknown, the code suppresses
 the surrounding UI rather than displaying a guess.
 
-Last updated: 2026-08-17 (rev 2)
+Last updated: 2026-08-17 (rev 3 — structure for all 32 routes now exists; every
+item below is still outstanding)
 
 ---
 
@@ -35,9 +36,13 @@ would make that statement false, which is worse than publishing nothing.
 
 ## Needed before the commercial pages can be written
 
+Each of these now has a scaffolded page waiting for it — the structure is built,
+the passage that needs the value is marked in `docs/COPY-BRIEF.md`, and the page
+stays a draft until it is filled. Nothing here can be worked around by writing.
+
 | Item | Placeholder | Notes |
 |---|---|---|
-| Package prices | `[PACKAGE_PRICE]` | `/packages/` cannot be written without them. No price is invented anywhere. |
+| Package prices | `[PACKAGE_PRICE]` | `/packages/` cannot be written without them. The price cells are the only briefs on the site that say *never* invent a figure, including a "from" figure. |
 | Package inclusions and exclusions | `[PACKAGE_INCLUSIONS]` | Must distinguish our fee, government fees and third-party fees. |
 | Founder name | `[FOUNDER_NAME]` | Enables `Person` author schema, which is currently suppressed. |
 | Founder biography | `[FOUNDER_BIO]` | `/about/` |
