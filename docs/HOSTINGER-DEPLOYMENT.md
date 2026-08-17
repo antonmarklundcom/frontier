@@ -49,10 +49,18 @@ In hPanel, for the target domain or subdomain:
    gets its own `public_html`. Keep the site's `robots.txt` as-is there — it
    already says `Disallow: /`.
 
+While you are in the panel, confirm `mod_rewrite` and `mod_headers` are
+available. Every directive in `.htaccess` is wrapped in `<IfModule>` so a
+missing module degrades rather than 500s — but it degrades silently, which is
+why section 5 checks the result rather than the configuration.
+
 ## 3. Upload
 
-hPanel → File Manager → open `public_html` → Upload the zip → right-click →
-Extract → **into the current directory**.
+hPanel → File Manager → open `public_html` → delete any default `index.html` or
+parking page already sitting there → Upload the zip → right-click → Extract →
+**into the current directory**. Delete the zip from the server afterwards.
+
+SFTP works equally well. The only thing that matters is where `index.php` lands.
 
 Afterwards `public_html/index.php` must exist. If you instead have
 `public_html/paraguayfrontier-2026-.../index.php`, the extract added a folder
@@ -88,9 +96,15 @@ content-writing job, not a config job.
 
 Leave `'launched' => false` until section 7.
 
-`config/env.php` (SMTP, CRM) is only needed once the consultation form posts
-somewhere. Copy `config/env.example.php` to `config/env.php` when you set that
-up, and give it permissions `600` if File Manager lets you.
+Never put SMTP or CRM credentials in `config/site.php`. Those belong in
+`config/env.php`, created from `config/env.example.php` on the server, with
+permissions `600` if File Manager lets you set them. It is excluded from every
+release for the same reason `site.php` is.
+
+When the consultation form is built, use **authenticated SMTP** from that file,
+not PHP `mail()` — on shared hosting `mail()` fails SPF/DKIM alignment and lands
+in spam. And do not describe the form as working until a real message has
+arrived in the destination inbox. A 200 from the handler is not delivery.
 
 ## 5. Verify the deploy
 
@@ -116,8 +130,10 @@ Expected on a correct deploy, all green:
 - `X-Content-Type-Options`, `Referrer-Policy`, `Content-Security-Policy`,
   `X-Frame-Options` all present on `/`
 
-Then look at it on a phone, on the real connection. That is the part no script
-covers, and the reason staging exists.
+The script covers section B of `HOSTINGER-LIVE-TEST-CHECKLIST.md` and nothing
+else. Work through the rest of that checklist by hand on a real phone — layout,
+fonts, the mobile menu, the process panel, PageSpeed on the live host. That is
+the part no script covers, and the reason staging exists.
 
 ### If something is wrong
 
@@ -130,12 +146,17 @@ covers, and the reason staging exists.
 | CSP header missing | `mod_headers` unavailable | Hostinger's LiteSpeed supports it; confirm the `.htaccess` uploaded whole |
 | Redirect loop on HTTPS | Force HTTPS in hPanel fighting rule 1 | leave both on; if it loops, turn off hPanel's and keep the `.htaccess` rule |
 
-## 6. Redeploying
+## 6. Redeploying and rolling back
 
 Rebuild, upload, extract over the top, overwrite when prompted. `config/site.php`
 and `config/env.php` are not in the zip, so they survive untouched. Delete stale
 files by hand if a route is ever removed from the registry — extraction adds and
 overwrites, it never deletes.
+
+Keep the previous zip. Rolling back is re-extracting it over the top: every file
+it contains is overwritten wholesale, and your server-owned config survives
+automatically because no release has ever contained it. Clear the LiteSpeed
+cache if it is enabled.
 
 ## 7. Going live
 
@@ -151,11 +172,33 @@ launch blockers. The order matters:
 5. `php tools/qa.php` — it must report 0 failures with `launched` true.
 6. Rebuild, upload, and run `smoke-test.php` against the live domain. The
    "home page is INDEXABLE" note is now the one you want to see.
-7. Google Search Console: verify the domain, submit `/sitemap.xml`, request
-   indexing on the home page.
+7. Google Search Console: verify the domain **by DNS TXT record**, not an HTML
+   file or a meta tag — TXT survives every redeploy. Then submit
+   `https://paraguayfrontier.com/sitemap.xml`.
+8. Spot-check three live pages for `<meta name="robots" content="index,follow`.
+
+Step 3 is the one people forget, and forgetting it is the most common reason a
+finished site never ranks.
 
 A partial launch is legitimate and is the fastest honest route to a site that
 earns: publish `/`, `/integrity/`, `/editorial-standards/` and a working
 `/book-consultation/`, and leave the guides unwritten. Pages with no content
 file render the "in preparation" page and stay `noindex` and out of the sitemap
 on their own — no configuration needed, and nothing unreviewed gets indexed.
+
+## 8. What has not been tested
+
+Nothing in this document has been executed against a real Hostinger account. The
+release zip has been built, verified and served from a clean extraction on a
+local PHP 8.4 server — all 32 routes answer, no placeholder reaches a visitor.
+That proves the archive and the application. It does not prove:
+
+- whether Hostinger's server honours these specific `.htaccess` directives
+- the HTTPS and non-www redirects
+- the `ErrorDocument` mappings
+- compression and cache headers
+- SMTP delivery
+
+`tools/smoke-test.php` exists to settle the first four in one command, the first
+time this is uploaded anywhere. Until it has been run against the live host, the
+honest description of this project is "packaged for Hostinger", not "deployed".

@@ -113,6 +113,42 @@ printf("  %d files, %s uncompressed, %s zipped\n",
     number_format(filesize($zipPath) / 1024, 0) . ' KB');
 echo "  zip root = document root: unzip into public_html, no nested folder\n";
 
+// ------------------------------------------------- verify what was just written
+// The archive is read back rather than trusted. ZipArchive::addFile writes the
+// entry name verbatim, so a Windows toolchain can produce "assets\css\site.css"
+// entries that extract into one file with a backslash in its name.
+$check = new ZipArchive();
+$check->open($zipPath);
+$names = [];
+for ($i = 0; $i < $check->numFiles; $i++) { $names[] = $check->getNameIndex($i); }
+$check->close();
+
+$problems = [];
+foreach ($names as $n) {
+    if (str_contains($n, '\\')) { $problems[] = "backslash in entry: $n"; }
+    if (str_starts_with($n, 'docs/') || str_starts_with($n, 'tools/')
+        || $n === 'config/site.php' || $n === 'config/env.php') {
+        $problems[] = "must not ship: $n";
+    }
+}
+$required = [
+    'index.php', '.htaccess', 'robots.txt', 'sitemap.xml', 'manifest.webmanifest',
+    'assets/css/site.css', 'assets/js/site.js', 'app/bootstrap.php',
+    'config/site.example.php', 'guides/residency/index.php',
+    'services/residency/index.php', 'errors/404/index.php',
+];
+foreach ($required as $r) {
+    if (!in_array($r, $names, true)) { $problems[] = "missing: $r"; }
+}
+if ($problems) {
+    echo "\nARCHIVE PROBLEMS — do not upload this file:\n";
+    foreach ($problems as $p) { echo "  - $p\n"; }
+    unlink($zipPath);
+    exit(1);
+}
+echo "  verified: forward slashes only, every required file present, no docs,\n";
+echo "            no tools, no server-owned config\n";
+
 // -------------------------------------------------------- post-build reminder
 require $root . '/app/bootstrap.php';
 $site = $GLOBALS['PF_SITE'];
