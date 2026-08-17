@@ -29,5 +29,7 @@ $GLOBALS['PF_SITE'] = require (is_file($configFile) ? $configFile : PF_ROOT . '/
 
 require PF_APP . '/helpers.php';
 require PF_APP . '/seo.php';
+require PF_APP . '/draft.php';
 require PF_APP . '/schema.php';
 require PF_APP . '/page-renderer.php';
+require PF_APP . '/form.php';

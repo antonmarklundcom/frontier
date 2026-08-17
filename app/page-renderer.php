@@ -62,22 +62,30 @@ function page_title(string $id): string
  */
 function render_page(string $id, int $httpStatus = 200): void
 {
-    $meta = page($id);
-    if ($meta === null) {
+    $resolved = resolve_page($id);
+    if ($resolved === null) {
         http_response_code(500);
         echo 'Unknown page id: ' . e($id);
         return;
     }
+    ['page' => $page, 'slots' => $slots] = $resolved;
 
-    // Merge the content file, when the page has one.
-    $contentFile = PF_APP . '/content/en/pages/' . str_replace('.', '-', $id) . '.php';
-    $content = is_file($contentFile) ? require $contentFile : [];
-    $page = array_merge($meta, $content);
-
-    // A page is only "live" if it genuinely has content blocks.
-    if (empty($page['blocks'])) {
-        $page['status'] = 'planned';
+    // A page is only "live" if it genuinely has content blocks...
+    if ($page['status'] === 'planned') {
         $page['blocks'] = [['type' => 'in-preparation']];
+        $page['faqs'] = [];
+    } elseif ($page['status'] === 'draft') {
+        // ...and no unwritten copy slots. A draft holds its finished structure
+        // but not its prose: an author can see it in preview mode, a visitor
+        // gets the same honest notice as a route that was never started.
+        if (preview_mode()) {
+            $page = mark_slots($page);
+            $page['draft_slots'] = count($slots);
+            array_unshift($page['blocks'], ['type' => 'draft-notice']);
+        } else {
+            $page['blocks'] = [['type' => 'in-preparation']];
+            $page['faqs'] = [];
+        }
     }
 
     $crumbs = breadcrumbs($page, registry());
