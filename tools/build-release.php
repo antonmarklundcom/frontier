@@ -12,6 +12,8 @@
  *   docs/        internal planning notes — no reason to sit on a web server
  *   tools/       build scripts — same
  *   release/     previous builds
+ *   storage/     runtime rate-limit state; the server creates its own, with a
+ *                deny rule, on the first submission
  *   config/site.php, config/env.php   local values and secrets; the server's
  *                copies are authoritative and are never overwritten by a deploy
  * The two .example.php files DO ship: bootstrap.php falls back to
@@ -69,7 +71,7 @@ if (($lintErrors || $qaCode !== 0) && $force) {
 }
 
 // ------------------------------------------------------------------ contents
-$skipTop  = ['.git', '.gitignore', 'docs', 'tools', 'release'];
+$skipTop  = ['.git', '.gitignore', 'docs', 'tools', 'release', 'storage'];
 $skipFile = ['config/site.php', 'config/env.php', '.DS_Store'];
 
 $files = [];

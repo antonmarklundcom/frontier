@@ -101,29 +101,55 @@ low legal-review burden per page, and it scales.
 Design system, PHP architecture, 32 routes resolving, home page written and
 verified, QA harness, sitemap generator, palette registered.
 
-### Phase 2 — Tier 1 guides (next)
+### Phase 2a — structure for the whole site — done
 
-Build the `quick-answer`, `definition`, `checklist`, `comparison`, `steps`,
-`sources`, `reviewer`, `faq` and `related` blocks, then write the four Tier 1
-guides against primary sources (Migraciones, DNIT, Banco Central, MRE,
-Identificaciones, the official legal database).
+Split from the original Phase 2 once it became clear that structure and prose
+are different jobs with different constraints: structure is an architecture
+decision that should be made once, in one head, for the whole site; prose is
+research, and research is where the time and the review burden actually sit.
+
+Delivered: the nine remaining block templates (`quick-answer`, `definition`,
+`checklist`, `comparison`, `steps`, `sources`, `reviewer`, `next-step`, `form`),
+the copy-slot system in `app/draft.php`, a content file for all 29 remaining
+routes carrying its finished block structure, the enquiry-form pipeline, and
+`docs/COPY-BRIEF.md` — 811 briefs, each naming what its passage must contain.
+
+The gate moved into the code. A page with any unwritten brief resolves to
+`draft`: `noindex`, out of the sitemap, and shown to visitors as the same
+"in preparation" notice as a route nobody started. It becomes live when its last
+brief is replaced. There is no status to remember to flip, and no way to publish
+a half-written page by mistake.
+
+### Phase 2b — the writing pass (next)
+
+Work `docs/COPY-BRIEF.md` in the order given in `docs/WRITING-GUIDE.md`:
+`/book-consultation/` first, because the home page's CTAs dead-end there today,
+then the four Tier 1 guides against primary sources (Migraciones, DNIT, Banco
+Central, MRE, Identificaciones, the official legal database).
 
 Each guide is written, then **held** for the legal or tax reviewer named in
-`docs/PRODUCTION-DATA-REQUIRED.md`. Unreviewed guides stay `planned` and stay
-out of the sitemap. This is enforced by the code, not by discipline.
+`docs/PRODUCTION-DATA-REQUIRED.md`. A written but unreviewed guide is `live` in
+the code's sense and still unpublished in the site's sense — the whole site
+stays `noindex` until launch, so the review gate holds regardless.
 
-### Phase 3 — commercial pages and the consultation form
+### Phase 3 — commercial pages
 
-Requires real prices, real inclusions, a real calendar URL and a refund policy
-drafted by a lawyer. The form is
-browser → own PHP handler → VenderCRM, with the CRM key server-side only, plus
-CSRF, honeypot, minimum-completion-time, rate limiting and POST-redirect-GET.
-The site cannot claim the form works until a real message has been received.
+Blocked on real inputs rather than on work: `/packages/` needs agreed prices and
+inclusions, `/about/` a named founder and a real photograph, `/privacy/` and
+`/terms/` a lawyer. The structure for all four is built and waiting.
 
-### Phase 4 — hubs, trust pages, legal pages, Hostinger deployment
+The enquiry pipeline itself is done — browser → own PHP handler → email +
+VenderCRM, CRM key server-side only, with CSRF, honeypot, minimum completion
+time, rate limiting and POST-redirect-GET. It renders **disabled**, with the
+reason stated on the page, until SMTP is configured. The site cannot claim the
+form works until a real message has been received on real hosting.
 
-`/integrity/`, `/editorial-standards/`, `/privacy/`, `/terms/`, `/faq/`, plus the
-Hostinger release zip and live verification.
+### Phase 4 — deployment and live verification
+
+Release builder and smoke test exist (`tools/build-release.php`,
+`tools/smoke-test.php`). What remains is running them against Hostinger and
+clearing `docs/HOSTINGER-LIVE-TEST-CHECKLIST.md`, which is still entirely
+unchecked — nothing has ever been uploaded.
 
 ### Phase 5 — launch
 

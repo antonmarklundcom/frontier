@@ -87,3 +87,61 @@ Bugs found and fixed in this pass:
     left-aligned, because `max-width` sat on the `.wrap` element itself.
 
 Still not verified: live Hostinger behaviour, form delivery, legal/tax review.
+
+---
+
+## Third pass — structure for all 32 routes, the enquiry form, the draft system
+
+Date: 2026-08-17 · Scope: the copy-slot system, nine new blocks, content files
+for the 29 previously unwritten routes, and the consultation form pipeline.
+
+The site now resolves to 6 live pages, 26 drafts and 0 planned routes, with 811
+unwritten passages tracked in `docs/COPY-BRIEF.md`.
+
+| Check | Method | Result |
+|---|---|---|
+| PHP syntax, every file | `php -l` across the project | Pass |
+| QA harness | `php tools/qa.php` | Pass — 0 failures, 0 warnings |
+| No brief reaches a visitor | QA forces preview off, then greps rendered HTML for `{{` and `⟦` on all 32 routes | Pass |
+| Registry status matches reality | QA compares each entry's `status` against `resolve_page()` | Pass, 32/32 |
+| Nothing non-live is indexable | QA asserts `is_indexable()` is false for every draft and planned page | Pass |
+| Every block type has a template | QA walks all content files' `blocks` arrays | Pass, 24 types in use |
+| Every page reference resolves | QA walks every `'page' => …` key in every content file | Pass |
+| Draft outlines render | QA renders all 26 drafts with preview on: one h1, banner present, no fatals | Pass |
+| Form defences intact | QA greps the handler for the CSRF, honeypot, timing, rate-limit and 303 paths | Pass |
+| Form is inert | `form_enabled()` false without SMTP; the page renders the disabled state and says why | Pass |
+| Horizontal overflow | Chromium at 390 and 1440px on a draft guide, the comparison page and the form page | Pass |
+| Console errors | Chromium, same four renders | None |
+| Comparison table on a phone | Chromium 390px | Pass — stacks under column labels, no scroll trap |
+
+### Decisions worth recording
+
+1. **Preview defaults to off in `config/site.example.php`.** That file is the
+   fallback a server with no `config/site.php` would load, so a shipped default
+   of "on" would have served editorial briefs to visitors. Authors opt in per
+   session with `PF_PREVIEW=1`, and preview is forced off when `launched` is
+   true regardless of either setting.
+2. **QA renders with preview forced off**, so an author's local flag cannot hide
+   a leak from the harness.
+3. **Registry `status` is documentation, not control.** `resolve_page()` derives
+   the truth from the content file on every request; QA fails the build when the
+   two disagree. This removes the "forgot to flip the flag" failure mode in both
+   directions.
+4. **The `sources` block renders a citation without a URL as plain text.** The
+   alternative — an author inventing a plausible government URL so the block
+   looks finished — is the exact failure this site is written against.
+5. **The `reviewer` block states "not yet reviewed" while that is true**, and
+   reads the name from config. The badge and the robots header cannot disagree.
+
+### Still not verified — do not claim these
+
+- **Live Hostinger behaviour.** Unchanged from the first pass: nothing has been
+  uploaded. `tools/smoke-test.php` settles most of it in one command when it is.
+- **Form delivery.** The SMTP client has never opened a socket to a real mail
+  server, and no message has been sent or received. The form is disabled, which
+  is the honest state, but "the code is written" is not "the form works".
+- **Legal and tax accuracy.** No qualified reviewer has read anything, and 26
+  pages now exist whose factual content has not been written at all.
+- **Rate limiting under real conditions.** The per-IP limiter writes to
+  `storage/`, which has never existed on a real host. It creates itself with a
+  deny rule, but the host's permissions have not been tested.

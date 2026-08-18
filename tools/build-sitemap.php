@@ -8,11 +8,9 @@ require __DIR__ . '/../app/bootstrap.php';
 
 $urls = [];
 foreach (registry() as $id => $entry) {
-    $page = $entry + ['id' => $id];
-    $file = PF_APP . '/content/en/pages/' . str_replace('.', '-', $id) . '.php';
-    if (!is_file($file)) {
-        $page['status'] = 'planned';
-    }
+    // resolve_page() decides the real status: a page whose copy is still
+    // unwritten resolves to 'draft' and can never reach the sitemap.
+    $page = resolve_page($id)['page'];
     if (!is_indexable($page)) {
         continue;
     }
