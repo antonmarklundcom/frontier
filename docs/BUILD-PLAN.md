@@ -2,6 +2,9 @@
 
 Where the project is, what comes next, and the commercial reasoning behind the
 sequence. Written after the home page shipped, 2026-08-17.
+Revised 2026-08-19 after a full repo audit: added Phase 1.5 (foundations),
+Phase 7 (client portal, deferred), the second-locale decision in Phase 6, and
+the PR execution model in `docs/PR-BATCHES.md`.
 
 ---
 
@@ -101,6 +104,47 @@ low legal-review burden per page, and it scales.
 Design system, PHP architecture, 32 routes resolving, home page written and
 verified, QA harness, sitemap generator, palette registered.
 
+### Phase 1.5 — Foundations
+
+Small, independent hardening PRs that make every later phase cheaper and make
+"the build is green" mean something. Found by the 2026-08-19 audit; full PR
+breakdown in `docs/PR-BATCHES.md` (Batch 0).
+
+1. **An automated validation gate.** `php -l` over every tracked file,
+   `php tools/qa.php`, `php tools/build-release.php` and a check that
+   `tools/build-sitemap.php` produces no diff against the committed
+   `sitemap.xml`. All four already exit non-zero on failure, so the gate is
+   cheap. **Owner decision 2026-08-19: this runs as a local `pre-push` git
+   hook, not as a GitHub Actions workflow.** The repository is private, where
+   Actions bills per minute against the account, and the deploy path
+   (Hostinger pulling from git) never touches a GitHub runner — so a workflow
+   would cost minutes and buy nothing a local hook does not already buy. The
+   trade-off is stated plainly: a hook binds pushes made from a checkout, not
+   edits typed into the GitHub web UI. With a single committer that is not a
+   real gap; if the repository ever gains collaborators, revisit it.
+2. **Production error handling** — `ini_set('display_errors','0')`, a
+   `set_exception_handler()` and shutdown handler in `app/bootstrap.php`
+   routing fatals to the 500 page instead of a stack trace.
+3. **`.htaccess` hardening** — add `site.php`/`env.php` literally to the
+   `<FilesMatch>` deny list so credential protection does not depend on
+   `mod_rewrite`; add HSTS (site already force-redirects to HTTPS).
+4. **QA harness extensions** — content-file/status sync as a build-time
+   failure rather than a silent "in preparation" downgrade; block-type
+   validation on every page, not just home; every block `page => id`
+   reference and every `navigation.php` id must resolve; every registry entry
+   must be reachable from navigation or a block.
+5. **i18n plumbing** (content still English-only) — parameterize `registry()`,
+   `navigation()`, `strings()` and content-file resolution by locale; move the
+   hardcoded template/helper strings (including the WhatsApp greeting in
+   `helpers.php` and the "Written by"/"Reviewed by" labels) into
+   `content/<locale>/global.php`; derive `inLanguage`, `og:locale` and
+   `<html lang>` from the locale; hreflang emits automatically once a second
+   locale has live pages. Spec: `docs/TRANSLATION-ARCHITECTURE.md`. Doing this
+   while three pages are written is cheap; retrofitting under 130 is not.
+6. **Raw-HTML discipline** — one `raw_html()` helper and an `_html` key-name
+   convention for the block templates that echo trusted markup, so the trust
+   boundary is grep-able before the content set and author count grow.
+
 ### Phase 2a — structure for the whole site — done
 
 Split from the original Phase 2 once it became clear that structure and prose
@@ -157,16 +201,69 @@ Clear `docs/PRODUCTION-DATA-REQUIRED.md`, set `'launched' => true`, replace
 `robots.txt`, regenerate the sitemap, verify by DNS TXT in Search Console,
 submit. Not before.
 
-### Phase 6 — Spanish under `/es/`
+### Phase 6 — second locale
 
-The architecture already separates content by locale and emits no `hreflang`
-until Spanish pages exist. Spanish must be professionally localised, with its
-own review dates and its own reviewer — a machine-translated legal page is a
-liability, not a growth channel.
+The plumbing ships in Phase 1.5; this phase is content only. Every locale must
+be professionally localised, with its own review dates and its own reviewer —
+a machine-translated legal page is a liability, not a growth channel.
+
+**Decision recorded 2026-08-19: English only for now.** The site launches and
+grows in English; the Phase 1.5 plumbing exists precisely so a second locale
+can be added later with a clean SEO setup (localised URLs, automatic
+reciprocal hreflang, x-default, per-locale sitemaps) and zero template work.
+When translation budget becomes real, the candidates are German (large,
+sceptical DACH emigrant segment; weak honest competition) and Spanish (local
+credibility with Paraguayan partners and reviewers). Until then this phase is
+dormant, and nothing else depends on it.
+
+### Phase 7 — client portal (separate app; gated on real clients, not a date)
+
+**Deliberately not part of this site.** The marketing site stays static —
+no login, no database, no accounts; that is why it deploys as a zip, has
+near-zero attack surface, and loads fast. Until portal day, VenderCRM is the
+admin surface: leads, pipeline, follow-up.
+
+When there are enough active clients that "where is my file?" becomes a daily
+question, build a **separate app** (Next.js + MySQL + Drizzle on the existing
+Hostinger stack, e.g. `portal.paraguayfrontier.com`) with these roles:
+
+| Role | Purpose |
+|---|---|
+| Client | Case stage on the same six-stage route the site already draws; document checklist with upload; what is blocking and whose move it is |
+| Employee / case manager | Update stages, request documents, manage assigned clients |
+| Reviewer (lawyer / accountant) | Sign off documents and content — the review gate made visible as workflow |
+| Admin (owner) | Users, packages, exports, everything |
+
+Gating it on real clients is not caution for its own sake: a portal stores
+passports and personal records (GDPR-grade liability) and must not exist
+before revenue justifies operating it.
 
 ---
 
-## 4. What would make this fail
+## 4. How the build is executed
+
+The build runs as batched PRs defined in `docs/PR-BATCHES.md`, written so a
+single model in a single chat can execute a whole batch unattended: each PR
+has scope, files, acceptance criteria and dependencies, and every build
+session appends what shipped, what was skipped and what risks it noticed to
+`docs/BUILD-LOG.md`. Batch 0 is Phase 1.5; Batch 1 is Phase 2b's guide work;
+Batch 2 is Phase 3 and is the only one blocked on owner-supplied data
+(`docs/PRODUCTION-DATA-REQUIRED.md`).
+
+Execution decisions recorded 2026-08-19:
+
+- **Merge policy: merge when the local gate is green.** The pre-push hook of
+  Phase 1.5 is the gate; a push that reaches GitHub has already passed
+  `php -l`, QA, the release build and the sitemap diff. The content-review
+  gate is unaffected — a guide stays unpublished until its named reviewer
+  signs off, whatever merges.
+- **Two build chats.** Chat 1 executes Batch 0 plus the guide block system —
+  mechanical, fully specified work. Chat 2 writes the Tier 1 guides and
+  interactive tools, where the writing itself is the product.
+
+---
+
+## 5. What would make this fail
 
 - **Publishing unreviewed guides to hit a page count.** The whole positioning
   rests on the review claim being true. One wrong apostille instruction that
