@@ -13,7 +13,7 @@ $wa = whatsapp_link('consultation');
            data-ev="book_click" data-ev-loc="footer_cta"><?= e($b['cta']['label']) ?></a>
         <?php if ($wa): ?>
           <a class="btn btn--ghost" href="<?= e($wa) ?>" rel="noopener"
-             data-ev="whatsapp_click" data-ev-loc="footer_cta">WhatsApp</a>
+             data-ev="whatsapp_click" data-ev-loc="footer_cta"><?= e(t('whatsapp_label')) ?></a>
         <?php endif; ?>
       </div>
     </div>

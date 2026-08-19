@@ -338,6 +338,60 @@ foreach ($reg as $id => $p) {
 $GLOBALS['PF_SITE']['preview_drafts'] = false;
 ok("$previewed draft outlines render cleanly under PF_PREVIEW=1");
 
+echo "\n== Block preview ==\n";
+// Most block templates are on no written page yet, so every check above that
+// walks the registry is blind to them: a block can be broken for weeks and no
+// rendered route will notice. tools/block-preview.php exercises all of them
+// with synthetic content; rendering it here is what turns that from a tool
+// somebody might remember to run into part of the gate.
+require_once PF_APP . '/../tools/block-preview.php';
+$previewPage = block_preview_page();
+$blockWarnings = [];
+set_error_handler(static function (int $no, string $msg, string $file, int $line) use (&$blockWarnings): bool {
+    $blockWarnings[] = basename($file) . ":$line $msg";
+    return true;
+});
+ob_start();
+partial('layout', ['page' => $previewPage, 'crumbs' => block_preview_crumbs()]);
+$previewHtml = ob_get_clean();
+restore_error_handler();
+
+foreach (array_unique($blockWarnings) as $w) {
+    bad("block preview raised a PHP warning: $w");
+}
+if (preg_match('/\\{\\{|⟦/', $previewHtml)) {
+    bad('block preview leaks an unwritten copy brief');
+}
+if (preg_match_all('/<h1[\\s>]/', $previewHtml) !== 1) {
+    bad('block preview renders ' . preg_match_all('/<h1[\\s>]/', $previewHtml) . ' h1 elements');
+}
+$markers = block_preview_markers();
+$missing = [];
+$covered = [];
+foreach ($previewPage['blocks'] as $pb) {
+    $type = $pb['type'];
+    $covered[$type] = true;
+    if (!isset($markers[$type])) {
+        bad("block preview renders '$type' but block_preview_markers() does not describe it");
+        continue;
+    }
+    if (!str_contains($previewHtml, $markers[$type])) { $missing[] = $type; }
+}
+if ($missing) { bad('block(s) rendered nothing in the preview: ' . implode(', ', $missing)); }
+
+// Blocks the preview does not exercise. Reported, not warned: every one of
+// them renders on a real route that the "Rendered output" section above walks
+// (the home-page compositions, and in-preparation on 26 routes), or is
+// preview-only and covered by the "Draft preview" section. A standing warning
+// that is always correct to ignore is how people learn to ignore warnings.
+$allBlocks = array_map(fn($f) => basename($f, '.php'), glob(PF_APP . '/templates/blocks/*.php'));
+$unexercised = array_diff($allBlocks, array_keys($covered));
+if ($unexercised) {
+    echo '  note  covered by rendered routes instead: ' . implode(', ', $unexercised) . "\n";
+}
+$rendered = count($covered);
+ok("$rendered block templates render with no PHP warnings, one h1, no leaked briefs");
+
 echo "\n== Enquiry form ==\n";
 // The form must be inert until delivery is configured, and its handler must
 // never be reachable without the token, the stamp and the honeypot.

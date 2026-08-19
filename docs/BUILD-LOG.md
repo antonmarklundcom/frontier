@@ -609,3 +609,90 @@ site have an XSS hole" is checkable rather than arguable: there are exactly
 two functions that put a value into HTML, one escapes and one does not, and QA
 fails the build if a third way appears. That is worth more than it sounds on a
 site whose whole positioning is that it can be trusted with careful reading.
+
+---
+
+## 2026-08-19 — PR-10 · block audit
+
+The card was rewritten in PR-00 from "build the guide blocks" to "audit them",
+because all nine had already shipped with Phase 2a. This is that audit, plus
+the fixes it found and the two items earlier PRs deferred here by name.
+
+**Shipped.**
+
+- **The last of the hardcoded English moved into the content layer** — about
+  thirty strings in `form`, `reviewer`, `sources`, `definition`,
+  `consultation-cta` and the footer. The form was the bulk of it: every label,
+  hint, state message, the six stage options and the privacy note. Sentences
+  with an insertion (`reviewer`'s "reviewed by X on DATE…", `definition`'s "In
+  Paraguayan documents this appears as X") became one `%s` string via
+  `t_format()` rather than fragments glued together in English word order —
+  the one shape a translator cannot fix.
+- **The null-page guard from PR-05's entry**, on all six unguarded `page()`
+  lookups (`header` twice, `guides`, `knowledge`, `pathways`, `related`). Both
+  layers were then tested together with the same seeded typo: the page now
+  renders with one h1 instead of fataling, **and** QA still fails loudly, so
+  the typo cannot ship silently either.
+- **`tools/block-preview.php`** — one page exercising sixteen block templates
+  with synthetic content, and **QA renders it**. This closes a real blind spot:
+  most block templates are on no written page yet, so every registry-walking
+  check was blind to them and a block could be broken for weeks without a
+  rendered route noticing. The check fails on any PHP warning raised inside a
+  block, on more than one h1, on a leaked copy brief, and on any block that
+  renders nothing.
+- The remaining ten blocks are reported as **covered by rendered routes
+  instead** — as a note, not a warning. A standing warning that is always
+  correct to ignore is how people learn to ignore warnings.
+
+**Verified.** All 32 routes still render byte for byte identical. The preview
+page was rendered in a real browser at **390 px and 1440 px**: sixteen blocks
+present, no horizontal overflow at either width, no JavaScript errors, no PHP
+warnings. Both new checks were proved against seeded faults — a block stubbed
+out to render nothing, and a block reading an undefined key.
+
+**Deliberately skipped.**
+
+- *`draft-notice.php` keeps its English.* It is preview-only chrome that no
+  visitor can ever see. PR-05's locale-parity check makes every key in
+  `global.php` mandatory in every future locale, so moving it there would
+  impose real translation cost for zero visitor benefit. A judgement call, and
+  the opposite call would also have been defensible.
+- The synthetic copy in `block-preview.php` is deliberate nonsense with **no
+  date, price, duration or statistic in it**, so nothing in it can be mistaken
+  for a claim about Paraguay if it is ever read out of context.
+
+**Risks and things noticed.**
+
+- *The block preview is synthetic, and synthetic data is optimistic.* It
+  exercises each block with well-formed input, so it proves a template runs —
+  not that it survives content shaped differently from the example. Writing it
+  already surfaced this: my first draft passed the wrong array shape to
+  `consultation-cta` and raised four PHP warnings, which is exactly the class
+  of failure a real content file could produce.
+- *The marker map is hand-maintained.* `block_preview_markers()` lists the
+  string each block must leave behind. It has to be explicit, because the class
+  prefixes deliberately do not match the type names (`page-header` emits
+  `phead`, `quick-answer` emits `qanswer`) — a derived marker silently "passed"
+  for every block whose prefix it guessed wrong when I tried it. QA fails if a
+  block is added to the preview without a marker, so it cannot rot silently.
+- *`form.php` renders on no page today*, because `/book-consultation/` is
+  still a draft. Its thirty-odd strings were therefore edited without a single
+  route proving the result — which is precisely why it was added to the
+  preview. It is now exercised, but it has still never been submitted by a
+  human on real hosting, and nothing about this PR changes that.
+- *The escaping-discipline check does not read `t()` strings.* A translation
+  containing markup would reach the page escaped, which is safe but would look
+  wrong. Only the `_html`-suffixed keys are meant to carry markup, and none of
+  the strings moved in this PR do except the two `_html` ones, which go through
+  `raw_html()`.
+
+**Worth the owner's attention.** Batch 0 is complete, and the shape of what
+remains has changed: every mechanical safeguard the plan asked for now exists
+and is enforced by the gate, so the next session is not blocked on engineering
+at all. It is blocked on **796 unwritten passages** and on the four owner
+inputs in `docs/PRODUCTION-DATA-REQUIRED.md`. The most useful engineering
+still available is small: a fifth validation gate for `docs/COPY-BRIEF.md`
+(noted in PR-06 — it was already stale by fifteen passages when this batch
+started), and dropping `'unsafe-inline'` from the CSP when the Batch 1
+interactive tools are written, while there are three scripts rather than
+thirty.

@@ -12,7 +12,7 @@ $email = real('email');
         <p class="foot__pitch"><?= e(t('footer_pitch')) ?></p>
         <ul class="foot__contact">
           <?php if ($email): ?><li><a href="mailto:<?= e($email) ?>" data-ev="email_click" data-ev-loc="footer"><?= e($email) ?></a></li><?php endif; ?>
-          <?php if ($wa): ?><li><a href="<?= e($wa) ?>" rel="noopener" data-ev="whatsapp_click" data-ev-loc="footer">WhatsApp</a></li><?php endif; ?>
+          <?php if ($wa): ?><li><a href="<?= e($wa) ?>" rel="noopener" data-ev="whatsapp_click" data-ev-loc="footer"><?= e(t('whatsapp_label')) ?></a></li><?php endif; ?>
         </ul>
       </div>
 

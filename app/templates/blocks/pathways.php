@@ -9,7 +9,7 @@
     </div>
 
     <div class="paths">
-      <?php foreach ($b['items'] as $i => $item): $p = page($item['page']); ?>
+      <?php foreach ($b['items'] as $i => $item): $p = page($item['page']); if (!$p) { continue; } ?>
         <a class="paths__item" href="<?= e(href($p['url'])) ?>" data-reveal="<?= e((string) $i) ?>"
            data-ev="service_click" data-ev-loc="pathways">
           <div class="card <?= e($item['variant']) ?>">

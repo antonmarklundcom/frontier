@@ -25,8 +25,8 @@
         </div>
       <?php endif; ?>
       <?php if (!empty($b['spanish'])): ?>
-        <p class="def__native">In Paraguayan documents and offices this appears as
-          <span lang="es"><?= e($b['spanish']) ?></span>.</p>
+        <p class="def__native"><?= raw_html(t_format('definition_native_html',
+          '<span lang="es">' . e($b['spanish']) . '</span>')) ?></p>
       <?php endif; ?>
     </div>
   </div>

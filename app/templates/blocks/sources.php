@@ -30,8 +30,7 @@
           </li>
         <?php endforeach; ?>
       </ol>
-      <p class="src__policy">Where practice and published text differ, we say which one we followed.
-        Secondary commentary — relocation blogs, forums, competitor pages — is never cited as authority here.</p>
+      <p class="src__policy"><?= e(t('sources_policy')) ?></p>
     </div>
   </div>
 </section>
