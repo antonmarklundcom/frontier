@@ -40,7 +40,7 @@ ErrorDocument 500 /errors/500/
 # Every PHP file under /app is listed. Keep this list complete when adding one:
 # a name missing here is protected only by mod_rewrite, which is the exact
 # dependency these rules exist to remove.
-<FilesMatch "^(bootstrap|helpers|page-renderer|seo|schema|draft|errors|form)\.php$">
+<FilesMatch "^(bootstrap|helpers|page-renderer|seo|schema|draft|errors|form|locale)\.php$">
     Require all denied
 </FilesMatch>
 
