@@ -252,3 +252,78 @@ decorative. It currently says the problem is ours and has been logged — which
 is true. When the consultation form goes live it should probably also give a
 way to reach a human that does not depend on the site working, since a visitor
 who hits a 500 mid-enquiry has just lost what they typed.
+
+---
+
+## 2026-08-19 — PR-03 · `.htaccess` hardening
+
+**Shipped.** Three changes to `.htaccess`, all of them about not depending on
+`mod_rewrite`:
+
+1. **`config/site.php` and `config/env.php` are denied by name.** `env.php`
+   holds the SMTP password and the VenderCRM API key. Until this PR its only
+   protection was rewrite rule 4 (`^(app|config|docs|tools)`), which lives
+   inside `<IfModule mod_rewrite.c>` — so on a host that had not loaded
+   `mod_rewrite`, the whole block would be skipped silently and the
+   credentials would be served as plain text. `FilesMatch` needs no module and
+   matches by basename, so it holds regardless.
+2. **The by-name deny list for `/app` was completed, not merely extended.** It
+   read `bootstrap|helpers|page-renderer|seo|schema|form-security` — which
+   named a file that does not exist (`form-security.php`, presumably renamed to
+   `form.php` at some point) while omitting three that do (`draft.php`,
+   `form.php`, and `errors.php` from PR-02). Now all eight `app/*.php` files
+   are listed and nothing is listed that is not there, verified by script
+   rather than by eye.
+3. **HSTS**, `max-age=31536000; includeSubDomains`. The site already
+   force-redirects to HTTPS; HSTS closes the gap that redirect leaves, which
+   is the very first plaintext request before the redirect can happen.
+
+Verification joins `docs/HOSTINGER-LIVE-TEST-CHECKLIST.md` (section B), and
+`tools/smoke-test.php` gained probes for `/config/env.php` and
+`/app/errors.php` plus an `Strict-Transport-Security` header check, so the
+next deploy tests this automatically rather than relying on someone
+remembering.
+
+**Deliberately skipped.** No `preload` on the HSTS header. Preloading is
+effectively irreversible — removal takes months and a browser release cycle —
+and that is an owner decision, not a build-session one. No CSP tightening;
+`'unsafe-inline'` is still in `script-src` and `style-src`, which is a real
+weakness but a different card. No change to the `/storage` posture.
+
+**Risks and things noticed.**
+
+- *This cannot be verified locally, at all.* `.htaccess` is only read by Apache
+  or LiteSpeed; the local `php -S` server ignores it entirely, and
+  `tools/smoke-test.php` knows this — it detects the server banner and downgrades
+  its deny-rule checks to "reported only" off real hosting. So the honest status
+  of this PR is: **the rules are correct by inspection and by a scripted
+  completeness check, and unproven until the first Hostinger deploy.** Nothing
+  has ever been uploaded, so section B of the live checklist is still entirely
+  unticked.
+- *HSTS is the one change here that can take the site down and stay down.*
+  Once a browser sees the header it refuses plaintext to that host — and with
+  `includeSubDomains`, to every subdomain — for a year. If a subdomain is ever
+  added without a valid certificate, it is unreachable for that visitor and no
+  server-side change fixes it. The checklist now says so at the point of
+  verification, which is the only place a warning is any use.
+- *The deny list is a hand-maintained list that must stay in sync with a
+  directory listing* — exactly the kind of thing that silently rots. This PR
+  proved it had already rotted once. A one-line QA check comparing the
+  `FilesMatch` alternation against `app/*.php` would make the rot impossible;
+  that belongs in PR-05, and is written down there rather than done here.
+- *`/storage` is covered, but by accident rather than design.* The rate-limit
+  state files are `rate-<hash>.json`, and the existing `\.(md|csv|json|lock)`
+  rule denies them by extension without needing `mod_rewrite`. `app/form.php`
+  also writes a `Require all denied` into `storage/` when it creates the
+  directory. Two independent protections, neither of which was put there for
+  this reason. Fine today; worth knowing it is coincidence if the state format
+  ever changes away from `.json`.
+
+**Worth the owner's attention.** The `Content-Security-Policy` still allows
+`'unsafe-inline'` for both scripts and styles, which means the CSP would not
+stop an injected inline script. That is defensible while the site has no
+user-generated content and no third-party JavaScript — but the Batch 1
+interactive tools (the document checklist, the cost selector, the
+self-assessment) are the first real inline JavaScript this site will carry, and
+that is the moment to move them to external files and drop `'unsafe-inline'`.
+Worth doing then, while there are three scripts, rather than later.
