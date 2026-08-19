@@ -35,7 +35,7 @@ function og_image(array $page): string
  */
 function breadcrumbs(array $page, array $registry): array
 {
-    $trail = [['label' => 'Home', 'url' => '/']];
+    $trail = [['label' => t('breadcrumb_home'), 'url' => '/']];
     if ($page['url'] === '/') {
         return $trail;
     }

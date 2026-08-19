@@ -327,3 +327,102 @@ interactive tools (the document checklist, the cost selector, the
 self-assessment) are the first real inline JavaScript this site will carry, and
 that is the moment to move them to external files and drop `'unsafe-inline'`.
 Worth doing then, while there are three scripts, rather than later.
+
+---
+
+## 2026-08-19 — PR-04 · i18n plumbing (dormant)
+
+**Shipped.** `docs/TRANSLATION-ARCHITECTURE.md` §3–§4, implemented. The site is
+still English-only and the rendered HTML is unchanged; what changed is that
+adding a second locale is now a content job rather than a renderer job.
+
+- **`app/locale.php`** — the locale layer: `locales()`, `default_locale()`,
+  `locale()`, `set_locale()`, `locale_lang()`, `og_locale()` and
+  `locale_alternates()`. `set_locale()` refuses a locale the site does not
+  serve and falls back to the default, because a route asking for an
+  unconfigured locale is a bug and serving the default is the safe reading.
+- **`registry()`, `navigation()`, `strings()`, `resolve_page()`, `page()`,
+  `page_url()`, `page_title()`, `t()`** all take an optional locale, defaulting
+  to the current request's. Static caches are keyed by locale rather than
+  single-valued, because the QA harness and the sitemap builder legitimately
+  read more than one locale in one process.
+- **`render_page($id, $locale = 'en', $httpStatus = 200)`** sets the locale
+  once; everything downstream reads `locale()`. `tools/make-routes.php` emits
+  the locale explicitly, so a `/es/` route will differ from its English twin by
+  exactly one argument. All 32 routes regenerated.
+- **Derived, not hardcoded:** `<html lang>`, `og:locale` (the one intentional
+  output change — `en` was never a valid Open Graph value, which wants
+  `language_TERRITORY`, so it is now `en_US`), and all three `inLanguage`
+  sites in `app/schema.php`.
+- **Eleven string sites moved into `content/en/global.php`** — the eight the
+  audit named, plus three it missed: the breadcrumb "Home" in `seo.php`, the
+  "In preparation" badge in the nav panel, and four `aria-label`s (`Primary`,
+  `Mobile`, `Breadcrumb`, `Page sections`) which are user-facing to anyone
+  using a screen reader and were being treated as if they were not.
+- **`navigation.php` footer headings** became labelled entries
+  (`['heading' => …, 'pages' => […]]`) instead of array keys. A key cannot be
+  translated without changing the structure, and a structure that differs per
+  locale is one every template has to special-case.
+- **hreflang and the language switcher exist and are dormant.** `head.php`
+  derives its alternates from `locale_alternates()`, which returns nothing
+  while one locale is configured — so not a single tag is printed today.
+  `partials/language-switcher.php` returns early rather than rendering an
+  empty element. Both were written to the §5 rules: a switcher links to the
+  same page when it is live in the other locale and to that locale's home page
+  when it is not (never to an in-preparation notice), and there is no
+  `Accept-Language` or IP redirect anywhere — a visitor researching a legal
+  process must never be silently moved off the page they chose.
+
+**Verified.** All 32 routes were rendered to disk before and after the change
+and compared byte for byte. Every file differs by exactly one line — the
+`og:locale` fix — and **zero files differ by anything else**. The dormant
+machinery was then exercised directly with a simulated two-locale config:
+`locales()`, `og_locale()` for four languages, and `set_locale()` correctly
+refusing an unconfigured locale and falling back. Gate green.
+
+**Deliberately skipped.**
+
+- *`href()` was not given a locale parameter*, though §3 item 3 lists it.
+  Threading one through would have been dead code: each locale has its own
+  registry with its own `url` values, so a Spanish page's URL is already
+  `/es/guias/...` by the time it is read. The locale is in the string before
+  `href()` ever sees it — that is precisely what makes localised slugs possible
+  instead of a translated site living under English paths. `page_url()` and
+  `page_title()` did get the parameter, since they read the registry.
+  Documented in `page_url()`'s docblock so the deviation is discoverable at the
+  code rather than only here.
+- *`manifest.webmanifest`* — §4 lists it as a per-locale or generated file. It
+  is a static file served directly, not rendered through the app, so localising
+  it means either generating it at build time or serving one per locale, and
+  both are decisions with a deploy consequence. Not this card.
+- *The block templates' hardcoded English* — see below. That is PR-10's card.
+
+**Risks and things noticed.**
+
+- *The Phase 2a block templates carry far more untranslated English than the
+  audit found*, because they were written after the audit. `form.php` alone has
+  fifteen or so user-facing sentences hardcoded — labels, hints, the privacy
+  note, the not-live explanation — and `reviewer.php`, `sources.php` and
+  `draft-notice.php` have several each. None of it is a bug today; all of it
+  would have to move before a second locale renders correctly. This is exactly
+  what PR-10's audit card now exists for, and it is a materially bigger job
+  than "check the blocks escape their output".
+- *A missing string renders as its own key.* `t()` returns the key when it is
+  absent, so an untranslated Spanish page would show `stamp_written_by` rather
+  than silently falling back to English. That is the right default — an
+  untranslated string must be impossible to miss — but it means a locale file
+  with a typo'd key ships a visible token. PR-05 should check that every
+  locale's `global.php` has the same key set as the default locale's.
+- *`og_locale()` maps a language to a territory* (`en` → `en_US`,
+  `es` → `es_ES`). Those territories are Open Graph convention, not a claim
+  about audience — worth knowing before someone reads `es_ES` as a decision to
+  target Spain rather than Paraguay. No consumer of `og:locale` treats the
+  territory as targeting; if that ever changes, the map is one place.
+
+**Worth the owner's attention.** The plumbing is done, which means the cost of
+a second locale is now entirely the cost of translation and review — no
+template work, no URL migration, and hreflang that cannot fall out of sync
+because it is derived rather than maintained. That was the whole point of doing
+it at three written pages instead of at a hundred and thirty. The decision it
+does *not* make for you is which language, or whether to spend on one at all;
+BUILD-PLAN Phase 6 still holds that as open, and nothing else depends on it.

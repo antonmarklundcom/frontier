@@ -6,9 +6,9 @@
     <h1><?= e($page['h1']) ?></h1>
     <p class="lede"><?= e(t('in_preparation_body')) ?></p>
     <ul class="prep__links">
-      <li><a href="/">Home</a></li>
-      <li><a href="<?= e(href(page_url('guides.residency'))) ?>">Paraguay residency guide</a></li>
-      <li><a href="<?= e(href(page_url('editorial-standards'))) ?>">How we research and review</a></li>
+      <li><a href="/"><?= e(t('prep_link_home')) ?></a></li>
+      <li><a href="<?= e(href(page_url('guides.residency'))) ?>"><?= e(t('prep_link_residency')) ?></a></li>
+      <li><a href="<?= e(href(page_url('editorial-standards'))) ?>"><?= e(t('prep_link_editorial')) ?></a></li>
     </ul>
   </div>
 </section>

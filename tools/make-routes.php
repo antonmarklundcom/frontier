@@ -21,10 +21,14 @@ foreach (registry() as $id => $entry) {
     }
     $depth  = $dir === PF_ROOT ? 0 : substr_count(str_replace(PF_ROOT . '/', '', $dir), '/') + 1;
     $up     = str_repeat('/..', $depth);
+    // render_page($id, $locale, $httpStatus). The locale is explicit in every
+    // generated route so that a /es/ route differs from its English twin by
+    // exactly one argument.
     $status = str_starts_with((string) $id, 'error-') ? ', ' . substr((string) $id, 6) : '';
     $handler = isset($entry['post_handler']) ? $entry['post_handler'] . "();\n" : '';
     $file    = $dir . '/index.php';
-    file_put_contents($file, "<?php\nrequire __DIR__ . '{$up}/app/bootstrap.php';\n{$handler}render_page('{$id}'{$status});\n");
+    $locale = default_locale();
+    file_put_contents($file, "<?php\nrequire __DIR__ . '{$up}/app/bootstrap.php';\n{$handler}render_page('{$id}', '{$locale}'{$status});\n");
     $made++;
 }
 echo "Wrote {$made} route entrypoints.\n";

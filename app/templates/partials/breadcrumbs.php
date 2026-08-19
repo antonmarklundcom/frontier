@@ -1,5 +1,5 @@
 <?php /** @var array $crumbs */ ?>
-<nav class="crumbs" aria-label="Breadcrumb">
+<nav class="crumbs" aria-label="<?= e(t('breadcrumb_label')) ?>">
   <div class="wrap">
     <ol class="crumbs__list">
       <?php $last = count($crumbs) - 1;

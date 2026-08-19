@@ -20,10 +20,10 @@ $author   = real('founder');
         </div>
       <?php endif; ?>
       <?php if ($author): ?>
-        <div class="stamp__pair"><dt>Written by</dt><dd><?= e($author) ?></dd></div>
+        <div class="stamp__pair"><dt><?= e(t('stamp_written_by')) ?></dt><dd><?= e($author) ?></dd></div>
       <?php endif; ?>
       <?php if ($reviewer): ?>
-        <div class="stamp__pair"><dt>Reviewed by</dt><dd><?= e($reviewer) ?></dd></div>
+        <div class="stamp__pair"><dt><?= e(t('stamp_reviewed_by')) ?></dt><dd><?= e($reviewer) ?></dd></div>
       <?php endif; ?>
     </dl>
   </div></div>

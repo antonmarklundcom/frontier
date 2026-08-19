@@ -1,3 +1,3 @@
 <?php
 require __DIR__ . '/../../app/bootstrap.php';
-render_page('guides.living');
+render_page('guides.living', 'en');

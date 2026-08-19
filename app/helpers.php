@@ -88,6 +88,11 @@ function whatsapp_link(string $context = ''): ?string
     if (!$number) {
         return null;
     }
-    $msg = 'Hello — I found paraguayfrontier.com' . ($context !== '' ? ' (' . $context . ')' : '') . ' and I have a question about Paraguay residency.';
+    // The greeting is a whole sentence in the content layer, not a sentence
+    // assembled here from fragments: word order differs between languages, so
+    // concatenating around a variable is the one shape a translator cannot fix.
+    $msg = $context !== ''
+        ? t_format('whatsapp_greeting_context', $context)
+        : t('whatsapp_greeting');
     return 'https://wa.me/' . preg_replace('/\D+/', '', $number) . '?text=' . rawurlencode($msg);
 }

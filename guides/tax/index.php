@@ -1,3 +1,3 @@
 <?php
 require __DIR__ . '/../../app/bootstrap.php';
-render_page('guides.tax');
+render_page('guides.tax', 'en');
