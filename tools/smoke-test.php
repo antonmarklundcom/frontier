@@ -84,6 +84,12 @@ $checks = [
     ['/about',                    [301],  'no-slash URL redirects to the slashed one'],
     ['/app/bootstrap.php',        [403],  '/app is not reachable over HTTP'],
     ['/config/site.example.php',  [403],  '/config is not reachable over HTTP'],
+    // env.php holds the SMTP password and the CRM key. It is denied twice over
+    // — by the /config rewrite and by its own FilesMatch — so this probe stays
+    // meaningful even on a host where mod_rewrite is missing. 404 passes: the
+    // file is not in the release zip, and absent is as good as denied.
+    ['/config/env.php',           [403, 404], 'credentials are never served'],
+    ['/app/errors.php',           [403],  'every /app PHP file is denied by name'],
     ['/tools/qa.php',             [403, 404], '/tools is not reachable over HTTP'],
     ['/docs/QA-REPORT.md',        [403, 404], 'internal docs are not served'],
     ['/no-such-page/',            [404],  'unknown URL returns 404, not 500'],
@@ -112,7 +118,13 @@ if (!$htaccessHost) {
 
 echo "\n== Headers on / ==\n";
 $home = $probe;
-foreach (['X-Content-Type-Options', 'Referrer-Policy', 'Content-Security-Policy', 'X-Frame-Options'] as $h) {
+foreach ([
+    'X-Content-Type-Options',
+    'Referrer-Policy',
+    'Content-Security-Policy',
+    'X-Frame-Options',
+    'Strict-Transport-Security',
+] as $h) {
     $present = stripos($home['headers'], $h . ':') !== false;
     printf("  %s  %s\n", $present ? 'ok  ' : 'warn', $h);
 }

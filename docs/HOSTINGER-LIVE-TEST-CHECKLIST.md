@@ -37,13 +37,21 @@ lines below are still yours to check by hand.
 - [ ] `/guides/residency` (no trailing slash) redirects to `/guides/residency/`
 - [ ] `/app/bootstrap.php` returns **403**
 - [ ] `/config/site.php` returns **403**
+- [ ] `/config/env.php` returns **403** or **404** — this is the one that holds
+      the SMTP password and the CRM key
+- [ ] `/app/errors.php` returns **403** (proves the by-name deny list is
+      complete, not just the `/app` rewrite)
 - [ ] `/docs/` returns 403 or 404 (docs are excluded from the release, so 404 is
       the expected result)
 - [ ] `/assets/` returns 403, not a directory listing
 - [ ] A URL that does not exist returns the custom 404 page **with a 404 status**
       — check the status in devtools, not just the page body
-- [ ] `Content-Security-Policy`, `X-Content-Type-Options` and `Referrer-Policy`
-      appear in the response headers
+- [ ] `Content-Security-Policy`, `X-Content-Type-Options`, `Referrer-Policy`
+      and `Strict-Transport-Security` appear in the response headers
+- [ ] `Strict-Transport-Security` reads `max-age=31536000; includeSubDomains`.
+      Once a browser has seen this header it will refuse plaintext for a year,
+      so verify HTTPS works on every hostname the site answers on **before**
+      trusting it — including any subdomain, because of `includeSubDomains`
 - [ ] `Cache-Control: public, max-age=31536000, immutable` appears on
       `/assets/css/site.css`
 - [ ] `Content-Encoding: gzip` or `br` appears on the HTML response

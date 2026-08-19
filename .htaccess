@@ -30,16 +30,42 @@ DirectoryIndex index.php index.html
 ErrorDocument 404 /errors/404/
 ErrorDocument 500 /errors/500/
 
-# --- Deny direct access to internal PHP, belt and braces ---------------------
-<FilesMatch "^(bootstrap|helpers|page-renderer|seo|schema|form-security)\.php$">
+# --- Deny direct access to internal files, belt and braces -------------------
+# These rules do NOT depend on mod_rewrite. Rule 4 above already blocks /app,
+# /config, /docs and /tools, but only while mod_rewrite is loaded — and the
+# one file whose exposure would be unrecoverable, config/env.php, is the one
+# that must never rest on that assumption. FilesMatch matches by basename, so
+# these hold wherever the file sits and whatever the server does with rewrites.
+#
+# Every PHP file under /app is listed. Keep this list complete when adding one:
+# a name missing here is protected only by mod_rewrite, which is the exact
+# dependency these rules exist to remove.
+<FilesMatch "^(bootstrap|helpers|page-renderer|seo|schema|draft|errors|form)\.php$">
     Require all denied
 </FilesMatch>
+
+# Configuration. site.php holds local values; env.php holds credentials — the
+# SMTP password and the VenderCRM API key. Neither is in version control and
+# neither may ever be served, under any server configuration.
+<FilesMatch "^(site|env)\.php$">
+    Require all denied
+</FilesMatch>
+
+# Documentation, data and lockfiles have no business being fetched. The
+# .example.php pair is denied here too: it ships in the release zip (so a
+# first upload renders instead of fataling) and reading it would hand out the
+# shape of the real configuration.
 <FilesMatch "\.(md|csv|json|lock|example\.php)$">
     Require all denied
 </FilesMatch>
 
 # --- Security headers --------------------------------------------------------
 <IfModule mod_headers.c>
+    # The site force-redirects to HTTPS above; HSTS closes the gap that leaves —
+    # the very first request, which is plaintext before the redirect can happen.
+    # includeSubDomains covers a future portal.* host. Not preloaded: preload is
+    # effectively irreversible, and that is an owner decision, not a build one.
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
     Header always set X-Content-Type-Options "nosniff"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     Header always set X-Frame-Options "SAMEORIGIN"
