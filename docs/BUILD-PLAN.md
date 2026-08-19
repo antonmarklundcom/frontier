@@ -2,6 +2,10 @@
 
 Where the project is, what comes next, and the commercial reasoning behind the
 sequence. Written after the home page shipped, 2026-08-17.
+Revised 2026-08-19 after a full repo audit: added Phase 1.5 (foundations),
+the interactive tools in Phase 2, the second-locale decision in Phase 6,
+Phase 7 (client portal, deferred), and the PR execution model in
+`docs/PR-BATCHES.md`.
 
 ---
 
@@ -101,7 +105,41 @@ low legal-review burden per page, and it scales.
 Design system, PHP architecture, 32 routes resolving, home page written and
 verified, QA harness, sitemap generator, palette registered.
 
-### Phase 2 — Tier 1 guides (next)
+### Phase 1.5 — Foundations (next, before any more content)
+
+Small, independent hardening PRs that make every later phase cheaper and make
+"merge when green" mean something. Found by the 2026-08-19 audit; full PR
+breakdown in `docs/PR-BATCHES.md` (Batch 0).
+
+1. **CI** — GitHub Actions running `php -l` over every file, `php tools/qa.php`
+   and `php tools/build-release.php` on every push and PR. All three already
+   exit non-zero on failure; CI is a ~30-line YAML away. Everything else in
+   this plan assumes it exists. After it lands, protect the default branch so
+   the CI check is required — that is what makes auto-merge safe.
+2. **Production error handling** — `ini_set('display_errors','0')`, a
+   `set_exception_handler()` and shutdown handler in `app/bootstrap.php`
+   routing fatals to the 500 page instead of a stack trace.
+3. **`.htaccess` hardening** — add `site.php`/`env.php` literally to the
+   `<FilesMatch>` deny list so credential protection does not depend on
+   `mod_rewrite`; add HSTS (site already force-redirects to HTTPS).
+4. **QA harness extensions** — every `status => 'live'` registry entry must
+   have a non-empty content file (build-time failure, not the silent
+   "in preparation" downgrade); block-type validation on every page, not just
+   home; every block `page => id` reference and every `navigation.php` id must
+   resolve; every registry entry must be reachable from navigation or a block.
+5. **i18n plumbing** (content still English-only) — parameterize `registry()`,
+   `navigation()`, `strings()` and content-file resolution by locale; move the
+   ~10 hardcoded template/helper strings (including the WhatsApp greeting in
+   `helpers.php` and the "Written by"/"Reviewed by" labels) into
+   `content/<locale>/global.php`; derive `inLanguage`, `og:locale` and
+   `<html lang>` from the locale; hreflang emits automatically once a second
+   locale has live pages. Spec: `docs/TRANSLATION-ARCHITECTURE.md`. Doing this
+   while three pages exist is cheap; retrofitting under 130 pages is not.
+6. **Raw-HTML discipline** — one `raw_html()` helper and an `_html` key-name
+   convention for the five block templates that echo trusted markup, so the
+   trust boundary is grep-able before the content set and author count grow.
+
+### Phase 2 — Tier 1 guides
 
 Build the `quick-answer`, `definition`, `checklist`, `comparison`, `steps`,
 `sources`, `reviewer`, `faq` and `related` blocks, then write the four Tier 1
@@ -111,6 +149,20 @@ Identificaciones, the official legal database).
 Each guide is written, then **held** for the legal or tax reviewer named in
 `docs/PRODUCTION-DATA-REQUIRED.md`. Unreviewed guides stay `planned` and stay
 out of the sitemap. This is enforced by the code, not by discipline.
+
+**Interactive tools inside the Tier 1 pages** — each one deepens the page it
+lives on rather than adding a route, works with vanilla JS + `localStorage`,
+degrades to plain content without JavaScript, and never invents a number:
+
+- The **document checklist as a tool**, on `/guides/residency/documents/`:
+  check items off, filter by nationality and civil status, print. This is the
+  lead-magnet idea from §2 upgraded from a PDF to the most linkable asset in
+  the category.
+- A **cost-category selector** on `/guides/residency/costs/`: which cost
+  categories apply to your situation — never an amount.
+- A **"where am I in the route?" self-assessment** (4–5 questions) routing the
+  visitor to the right guide or service; doubles as qualification before the
+  consultation form.
 
 ### Phase 3 — commercial pages and the consultation form
 
@@ -131,16 +183,57 @@ Clear `docs/PRODUCTION-DATA-REQUIRED.md`, set `'launched' => true`, replace
 `robots.txt`, regenerate the sitemap, verify by DNS TXT in Search Console,
 submit. Not before.
 
-### Phase 6 — Spanish under `/es/`
+### Phase 6 — second locale (`/es/`, and possibly `/de/` first)
 
-The architecture already separates content by locale and emits no `hreflang`
-until Spanish pages exist. Spanish must be professionally localised, with its
-own review dates and its own reviewer — a machine-translated legal page is a
-liability, not a growth channel.
+The plumbing ships in Phase 1.5; this phase is content only. Every locale must
+be professionally localised, with its own review dates and its own reviewer —
+a machine-translated legal page is a liability, not a growth channel.
+
+**Open decision (owner): which language earns the first translation budget.**
+The commercial case for **German** is strong — DACH emigrants are one of the
+largest and most sceptical, research-heavy segments in this category, and the
+German-language competition is mostly the hype-funnel type this site is built
+to beat. **Spanish** buys local credibility and reads well to Paraguayan
+partners and reviewers. The architecture cost is identical either way; only
+the translation order is being decided.
+
+### Phase 7 — client portal (separate app; gated on real clients, not a date)
+
+**Deliberately not part of this site.** The marketing site stays static —
+no login, no database, no accounts; that is why it deploys as a zip, has
+near-zero attack surface, and loads in 200 ms. Until portal day, VenderCRM is
+the admin surface: leads, pipeline, follow-up.
+
+When there are roughly 5–10 active clients and "where is my file?" is a daily
+question, build a **separate app** (Next.js + MySQL + Drizzle on the existing
+Hostinger stack, e.g. `portal.paraguayfrontier.com`) with these roles:
+
+| Role | Purpose |
+|---|---|
+| Client | Case stage on the same six-stage route the site already draws; document checklist with upload; what is blocking and whose move it is |
+| Employee / case manager | Update stages, request documents, manage assigned clients |
+| Reviewer (lawyer / accountant) | Sign off documents and content — the review gate made visible as workflow |
+| Admin (owner) | Users, packages, exports, everything |
+
+Gating it on real clients is not caution for its own sake: a portal stores
+passports and personal records (GDPR-grade liability) and must not exist
+before revenue justifies operating it.
 
 ---
 
-## 4. What would make this fail
+## 4. How the build is executed
+
+The build runs as batched PRs defined in `docs/PR-BATCHES.md`, written so a
+single model in a single chat can execute a whole batch unattended: each PR
+has scope, files, acceptance criteria and dependencies, CI is the merge gate,
+and every build session appends what shipped, what was skipped and what risks
+it noticed to `docs/BUILD-LOG.md`. Batch 0 is Phase 1.5; Batch 1 is Phase 2;
+Batch 2 is Phase 3 and is the only one blocked on owner-supplied data
+(`docs/PRODUCTION-DATA-REQUIRED.md`).
+
+---
+
+## 5. What would make this fail
 
 - **Publishing unreviewed guides to hit a page count.** The whole positioning
   rests on the review claim being true. One wrong apostille instruction that
