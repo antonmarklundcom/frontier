@@ -33,3 +33,10 @@ Decisions taken into the plan: no auth/roles on this site — client portal
 deferred to Phase 7 as a separate app, gated on real clients; i18n plumbing
 now, translated content later; which language translates first (German vs
 Spanish) left as an owner decision in Phase 6.
+
+Owner decisions, same day: **English only for now** — Phase 1.5 plumbing
+ships dormant so a later locale gets a clean SEO setup with no template work;
+**auto-merge when green** is the standing policy for build sessions (owner
+enables branch protection + required CI check after PR-01); **two build
+chats** — chat 1 for Batch 0 + PR-10, chat 2 for the guide writing and tools;
+**checklist email capture goes to VenderCRM** (added as PR-16).

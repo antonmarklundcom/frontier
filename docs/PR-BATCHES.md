@@ -1,9 +1,12 @@
 # PR batches — the executable build manifest
 
 Written 2026-08-19 for BUILD-PLAN §4. This file is the work order for a build
-model (Opus 5 or Sonnet 5) running unattended in its own chat: pick the next
-unblocked PR, build it, validate locally, open the PR, merge when CI is green,
-move on. One batch is sized to finish in one session.
+session running unattended in its own chat: pick the next unblocked PR, build
+it, validate locally, open the PR, enable auto-merge, move on once CI is
+green. One batch is sized to finish in one session. Owner decisions
+2026-08-19: auto-merge-when-green is the standing policy; Chat 1 runs
+PR-01…06 + PR-10, Chat 2 runs PR-11…16 (see BUILD-PLAN §4); the site is
+English-only for now, so PR-04 ships the locale plumbing dormant.
 
 ## Standing rules for every build session
 
@@ -103,6 +106,19 @@ invented number anywhere. Needs: PR-10.
 **PR-15 · Route self-assessment** — the 4–5-question "where am I in the
 route?" widget on `/guides/residency/`, routing to the right guide/service.
 Same no-JS and no-invented-numbers rules. Needs: PR-10.
+
+**PR-16 · Checklist email capture → VenderCRM** — owner decision 2026-08-19:
+the document checklist doubles as a lead magnet. Optional email field on the
+checklist tool ("send me this checklist and corrections when rules change"),
+posting to a server-side PHP handler that forwards to the VenderCRM leads
+endpoint — API key in `config/env.php` only, never client-side; honeypot,
+minimum-completion-time and rate limiting like the consultation form; the
+checklist itself works fully without entering an email, and the copy promises
+only what will actually be sent. Placeholder-suppression applies: with no CRM
+key configured, the email field is omitted, not broken. Accept: handler
+locally testable; no claim of delivery until a real submission lands in
+VenderCRM (owner verifies). Needs: PR-11 (the checklist page) and the CRM
+key; share the handler's security plumbing with PR-20 if PR-20 lands first.
 
 ## Batch 2 — commercial pages + form (BUILD-PLAN Phase 3)
 

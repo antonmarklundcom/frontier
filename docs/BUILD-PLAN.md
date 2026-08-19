@@ -189,13 +189,14 @@ The plumbing ships in Phase 1.5; this phase is content only. Every locale must
 be professionally localised, with its own review dates and its own reviewer —
 a machine-translated legal page is a liability, not a growth channel.
 
-**Open decision (owner): which language earns the first translation budget.**
-The commercial case for **German** is strong — DACH emigrants are one of the
-largest and most sceptical, research-heavy segments in this category, and the
-German-language competition is mostly the hype-funnel type this site is built
-to beat. **Spanish** buys local credibility and reads well to Paraguayan
-partners and reviewers. The architecture cost is identical either way; only
-the translation order is being decided.
+**Decision recorded 2026-08-19: English only for now.** The site launches and
+grows in English; the Phase 1.5 plumbing exists precisely so a second locale
+can be added later with a clean SEO setup (localised URLs, automatic
+reciprocal hreflang, x-default, per-locale sitemaps) and zero template work.
+When translation budget becomes real, the candidates are German (large,
+sceptical DACH emigrant segment; weak honest competition) and Spanish (local
+credibility with Paraguayan partners and reviewers). Until then this phase is
+dormant, and nothing else depends on it.
 
 ### Phase 7 — client portal (separate app; gated on real clients, not a date)
 
@@ -230,6 +231,18 @@ and every build session appends what shipped, what was skipped and what risks
 it noticed to `docs/BUILD-LOG.md`. Batch 0 is Phase 1.5; Batch 1 is Phase 2;
 Batch 2 is Phase 3 and is the only one blocked on owner-supplied data
 (`docs/PRODUCTION-DATA-REQUIRED.md`).
+
+Execution decisions recorded 2026-08-19:
+
+- **Merge policy: auto-merge when green.** Build sessions enable auto-merge
+  on their PRs; CI is the gate. Owner action after PR-01 merges: protect the
+  default branch (require the CI check) and allow auto-merge in repo
+  settings. The content-review gate is unaffected — guides stay `planned`
+  until their named reviewer signs off, whatever merges.
+- **Two build chats.** Chat 1 executes Batch 0 plus the guide block system
+  (PR-01…06, PR-10) — mechanical, fully specified work. Chat 2 writes the
+  Tier 1 guides and interactive tools (PR-11…16), where the writing itself is
+  the product and deserves the stronger writer. No model swaps inside a chat.
 
 ---
 
