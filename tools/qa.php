@@ -42,9 +42,137 @@ foreach ($reg as $id => $p) {
     }
     if (!str_ends_with($p['url'], '/')) { bad("url without trailing slash: $id"); }
     if (!in_array($p['type'], ['page', 'service', 'article'], true)) { bad("bad type on $id"); }
+
+    // 'last_reviewed' is printed to visitors as a credibility claim and fed to
+    // <lastmod> in the sitemap. A date that is merely well-formed is not
+    // enough: '2026-02-30' passes a regex and is not a day. A future date is
+    // worse than a wrong one — it claims a review that has not happened.
+    if (!empty($p['last_reviewed'])) {
+        $d = $p['last_reviewed'];
+        if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $d, $m)) {
+            bad("last_reviewed on $id is not YYYY-MM-DD: '$d'");
+        } elseif (!checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            bad("last_reviewed on $id is not a real date: '$d'");
+        } elseif ($d > date('Y-m-d')) {
+            bad("last_reviewed on $id is in the future: '$d'");
+        }
+    }
 }
 $fail === 0 && ok('every entry has url/title/description/h1/type/status/intent');
 
+echo "\n== Content files ==\n";
+// (a) A registry entry claiming 'live' must have a content file with blocks in
+// it. resolve_page() would quietly downgrade a missing file to 'planned' and
+// the site would render the in-preparation notice — correct behaviour at
+// runtime, and exactly the wrong behaviour at build time, where it hides the
+// fact that a page the registry advertises as finished does not exist.
+$liveChecked = 0;
+foreach ($reg as $id => $p) {
+    if (($p['status'] ?? '') !== 'live') { continue; }
+    $liveChecked++;
+    $file = PF_APP . '/content/' . default_locale() . '/pages/' . str_replace('.', '-', $id) . '.php';
+    if (!is_file($file)) {
+        bad("$id is registered 'live' but has no content file (" . basename($file) . ")");
+        continue;
+    }
+    $content = require $file;
+    if (empty($content['blocks'])) {
+        bad("$id is registered 'live' but its content file has no blocks");
+    }
+}
+ok("$liveChecked live entr(y/ies) have a content file with blocks");
+
+echo "\n== Navigation and reachability ==\n";
+// (c) Every id named in navigation.php resolves. A typo here is a link that
+// silently vanishes from the menu — page() returns null and the template skips
+// it — so nobody notices until traffic does.
+$nav = navigation();
+$navIds = [];
+$collect = function ($node) use (&$collect, &$navIds) {
+    if (!is_array($node)) { return; }
+    foreach ($node as $k => $v) {
+        if ($k === 'page' && is_string($v)) { $navIds[$v] = true; }
+        if ($k === 'pages' && is_array($v)) {
+            foreach ($v as $pid) { if (is_string($pid)) { $navIds[$pid] = true; } }
+        }
+        $collect($v);
+    }
+};
+$collect($nav);
+foreach (array_keys($navIds) as $navId) {
+    if (!isset($reg[$navId])) { bad("navigation.php references unknown page id '$navId'"); }
+}
+ok(count($navIds) . ' navigation page references all resolve');
+
+// (d) Every registry entry should be reachable from navigation or from some
+// page's blocks. An orphan is not a build failure — a page can legitimately be
+// linked only from prose, and error pages are reached by the server — but an
+// unreachable page is almost always an oversight, so it warns.
+$linked = $navIds;
+foreach ($reg as $id => $p) {
+    $file = PF_APP . '/content/' . default_locale() . '/pages/' . str_replace('.', '-', $id) . '.php';
+    if (!is_file($file)) { continue; }
+    $walkLinks = function ($node) use (&$walkLinks, &$linked) {
+        if (!is_array($node)) { return; }
+        foreach ($node as $k => $v) {
+            if ($k === 'page' && is_string($v)) { $linked[$v] = true; }
+            $walkLinks($v);
+        }
+    };
+    $walkLinks(require $file);
+}
+$exempt = ['home', 'error-404', 'error-500', 'thank-you'];
+$orphans = array_diff(array_keys($reg), array_keys($linked), $exempt);
+$orphans
+    ? soft('unreachable from navigation or any block: ' . implode(', ', $orphans))
+    : ok('every registry entry is reachable from navigation or a block');
+
+echo "\n== Locale parity ==\n";
+// Every configured locale must define the same string keys as the default. A
+// missing key renders as the key itself — visible, on purpose — but it should
+// be caught here rather than by a visitor reading 'stamp_written_by' on a
+// finished page. Trivially satisfied while one locale is configured; the point
+// is that it stops being trivial the moment a second one is added.
+$baseKeys = array_keys(strings(default_locale()));
+foreach (locales() as $loc) {
+    if ($loc === default_locale()) { continue; }
+    $dir = PF_APP . '/content/' . $loc;
+    if (!is_dir($dir)) { bad("locale '$loc' is configured but app/content/$loc/ does not exist"); continue; }
+    $missing = array_diff($baseKeys, array_keys(strings($loc)));
+    if ($missing) { bad("locale '$loc' is missing string(s): " . implode(', ', $missing)); }
+}
+ok(count(locales()) . ' configured locale(s), ' . count($baseKeys) . ' string keys, no gaps');
+
+echo "\n== .htaccess deny list ==\n";
+// The by-name deny list is what protects app/*.php on a host without
+// mod_rewrite. It is a hand-maintained list that has to stay in sync with a
+// directory listing, and PR-03 found it had already rotted — naming a file
+// that no longer exists while omitting three that do. A list like that needs a
+// machine watching it, not a convention.
+$ht = @file_get_contents(PF_ROOT . '/.htaccess');
+if ($ht === false) {
+    bad('.htaccess is missing');
+} elseif (!preg_match('/<FilesMatch "\^\(([^)]*)\)\\\.php\$">/', $ht, $m)) {
+    bad('.htaccess has no by-name PHP deny list — /app is protected only by mod_rewrite');
+} else {
+    $listed = explode('|', $m[1]);
+    $onDisk = array_map(fn($f) => basename($f, '.php'), glob(PF_APP . '/*.php'));
+    if ($missing = array_diff($onDisk, $listed)) {
+        bad('.htaccess deny list is missing app/' . implode('.php, app/', $missing) . '.php');
+    }
+    if ($stale = array_diff($listed, $onDisk)) {
+        soft('.htaccess deny list names file(s) that no longer exist: ' . implode(', ', $stale));
+    }
+    if (!str_contains($ht, '^(site|env)\.php$')) {
+        bad('.htaccess does not deny config/site.php and config/env.php by name');
+    }
+    ok(count($onDisk) . ' app PHP file(s) denied by name, plus the config pair');
+}
+
+// Structural checks run BEFORE the render loop, deliberately. A single typo'd
+// page id in navigation.php makes page() return null and takes every page on
+// the site down with a TypeError — so if these ran after rendering, QA would
+// die on the symptom and never print the one line that names the cause.
 echo "\n== Rendered output ==\n";
 // Render as a visitor would see the site, whatever the local preview setting
 // is: an author's preview flag must never be able to hide a leak from QA.
@@ -124,7 +252,7 @@ $walk = function ($node, string $pageId) use (&$walk, &$reg) {
     }
 };
 foreach ($reg as $id => $p) {
-    $file = PF_APP . '/content/en/pages/' . str_replace('.', '-', $id) . '.php';
+    $file = PF_APP . '/content/' . default_locale() . '/pages/' . str_replace('.', '-', $id) . '.php';
     if (!is_file($file)) { continue; }
     $content = require $file;
     foreach ($content['blocks'] ?? [] as $b) {
@@ -172,7 +300,7 @@ foreach (['csrf' => 'hash_equals', 'honeypot' => 'company_website', 'timing' => 
 ok('handler retains: CSRF token, honeypot, minimum completion time, rate limit, POST-redirect-GET');
 
 echo "\n== Rail integrity ==\n";
-$home = require PF_APP . '/content/en/pages/home.php';
+$home = require PF_APP . '/content/' . default_locale() . '/pages/home.php';
 ob_start(); render_page('home'); $html = ob_get_clean();
 foreach ($home['rail'] as $stop) {
     if (!str_contains($html, 'id="' . $stop['target'] . '"')) { bad("rail stop '{$stop['target']}' has no matching section id"); }

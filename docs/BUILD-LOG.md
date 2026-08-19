@@ -426,3 +426,92 @@ because it is derived rather than maintained. That was the whole point of doing
 it at three written pages instead of at a hundred and thirty. The decision it
 does *not* make for you is which language, or whether to spend on one at all;
 BUILD-PLAN Phase 6 still holds that as open, and nothing else depends on it.
+
+---
+
+## 2026-08-19 — PR-05 · QA harness extensions
+
+**Shipped.** Seven checks, each proved against a seeded fault and the seed then
+removed.
+
+The card's five:
+
+- **(a) A `status => 'live'` registry entry must have a content file with
+  blocks in it.** `resolve_page()` quietly downgrades a missing file to
+  `planned` and the site renders the in-preparation notice — correct at
+  runtime, exactly wrong at build time, where it hides the fact that a page the
+  registry advertises as finished does not exist. Now a hard failure with its
+  own message, distinct from the existing status-mismatch check.
+- **(b) Unknown block types on every page** and **(c) block `page => id`
+  references** were already covered on `main` — the harness had moved ahead of
+  the card. Verified rather than rewritten.
+- **(c, second half) Every `navigation.php` id resolves.** New, and the most
+  valuable of the seven: see below.
+- **(d) Every registry entry reachable from navigation or a block**, as a
+  warning. Home, the two error pages and `/thank-you/` are exempt — they are
+  reached by the server or by a redirect, not by a link.
+- **(e) `checkdate()` on `last_reviewed`**, plus a future-date check.
+  `2026-02-30` passes a regex and is not a day; a date in the future claims a
+  review that has not happened. Both now fail.
+
+Two more, promised in earlier entries of this log rather than invented here:
+
+- **The `.htaccess` deny list is checked against `app/*.php`** (promised in
+  PR-03's entry). It fails if a file on disk is not denied by name, warns if
+  the list names a file that no longer exists, and fails if the `site|env`
+  config rule has gone missing.
+- **Locale string-key parity** (promised in PR-04's entry): every configured
+  locale must define the same keys as the default, and its content directory
+  must exist. Trivially satisfied with one locale — the point is that it stops
+  being trivial the moment a second is added.
+
+**Two real defects found while writing this, both fixed here.**
+
+1. *The deny-list check failed on its first run.* PR-04 added `app/locale.php`
+   and did not add it to `.htaccess` — the exact rot PR-03's entry predicted,
+   reproduced inside a single batch, by the same session that wrote the
+   warning. That is the argument for the check, made better than any reasoning
+   could: a hand-maintained list that must track a directory needs a machine
+   watching it. `.htaccess` is fixed in this PR.
+2. *A one-character typo in `navigation.php` takes the entire site down.*
+   Seeding `'page' => 'abuot'` made `page()` return null, `$cp['url']` null,
+   and `href(null)` a `TypeError` — fatal, on **every** page, since the header
+   renders everywhere. It also meant QA itself died mid-render and never
+   reached the check that would have named the cause. So the structural checks
+   were moved to run **before** the render loop: QA now prints
+   `navigation.php references unknown page id 'abuot'` instead of dumping half
+   a page of HTML and a stack trace. With PR-01's gate in front of the push and
+   PR-02's handler in front of the visitor, this class of typo can no longer
+   reach production — but it can still ruin an afternoon locally.
+
+**Deliberately skipped.** `app/templates/partials/header.php` was **not** made
+defensive against a null page. It is the template that turns the typo into a
+site-wide fatal, and a two-line guard would fix it — but templates are PR-10's
+card, this PR is the harness, and the harness now makes the fault unshippable.
+Written down here so it is a decision rather than an oversight: **PR-10 should
+add the guard.**
+
+**Risks and things noticed.**
+
+- *The reachability check is a warning and should stay one.* A page can
+  legitimately be linked only from prose inside a block, and the walker only
+  understands structured `page => id` references. Making it a failure would
+  train people to add fake navigation entries to silence it, which is worse
+  than an orphan.
+- *The deny-list check parses `.htaccess` with a regex.* If someone reformats
+  that `FilesMatch` line — splits it, changes the quoting — the check fails
+  with "no by-name PHP deny list" rather than silently passing. That is the
+  right failure direction, but the message should be read as "the check cannot
+  find the rule", not necessarily "the rule is gone".
+- *QA now reads `config/site.example.php`'s locale list*, so a locale added to
+  the example config without a content directory fails the build. That is
+  intended — the example config is what a fresh checkout and the release zip
+  both fall back to — but it means the example config is now load-bearing, not
+  decorative.
+
+**Worth the owner's attention.** The harness went from 11 sections to 15 and
+still runs in about a second, because every check is static analysis over the
+registry rather than a browser. That ratio is why the gate is worth having: it
+is cheap enough that nobody is tempted to skip it. The thing it still cannot
+check is whether a sentence is *true* — which remains the only quality gate on
+this project that a person has to perform.
