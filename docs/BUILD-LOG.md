@@ -173,3 +173,82 @@ small enough that whole-tree checks finish in seconds.
 entry saying so. Every PR in this batch is opened explicitly against `main`,
 so the work is unaffected — but a fresh clone still lands on the older line,
 and that will eventually bite someone.
+
+---
+
+## 2026-08-19 — PR-02 · production error handling
+
+**Shipped.** `app/errors.php`, required from `bootstrap.php` immediately after
+`helpers.php` so it is installed before anything else can fail. On a web
+request: `display_errors` off, `log_errors` on, `error_reporting(E_ALL)`, a
+`set_exception_handler()` and a `register_shutdown_function()` that catches
+the fatal types an exception handler cannot see. Both log one line naming the
+kind, message, file, line, method and URI — then render the site's own 500
+page with a real 500 status.
+
+Three details that are the actual substance of the file:
+
+- **CLI is excluded.** `tools/qa.php`, `tools/build-release.php` and the rest
+  of the validation gate all require `bootstrap.php`. Under CLI, PHP's default
+  loud-trace-on-the-terminal behaviour is exactly what the person who broke it
+  wants, and an HTML error page written to stdout would corrupt tool output.
+- **Recursion is guarded.** If rendering the 500 page itself throws — a broken
+  registry, template or config — the handler falls back to a hardcoded,
+  dependency-free HTML document. A re-entrancy flag stops a failure inside the
+  handler from looping.
+- **Output buffers are discarded** before rendering, so a visitor never gets
+  half a page glued to an error page. If headers were already sent the status
+  code is unrecoverable; the handler says so in a comment and degrades to an
+  HTML comment rather than pretending.
+
+**Verified over real HTTP**, not by reasoning. A scratch route was made to
+throw an uncaught `RuntimeException` carrying a canary string, and a second to
+trigger a fatal (call to undefined function), both served through `php -S`:
+
+- both returned **500**, both rendered the site's own "Something went wrong"
+  page, and a normal page still returned 200;
+- the canary string, the exception class, the words "Stack trace" and the
+  absolute filesystem path were all **absent** from both response bodies;
+- all of that detail was present in the error log, which is where it belongs.
+
+The scratch routes were removed.
+
+**Deliberately skipped.** No debug or dev-mode flag. `config/site.php` has no
+such key today, adding one is not on this card, and inventing configuration is
+how "display_errors was on in production" happens. The consequence is real and
+worth stating: **debugging a broken page locally now means reading the error
+log rather than the browser.** For `php -S` that log is the terminal, so the
+cost is small — but if it becomes annoying, the right fix is one explicit
+`'debug' => false` key in the config, defaulting off, never an environment
+sniff.
+
+Also skipped: adding `errors` to the `<FilesMatch>` deny list in `.htaccess`.
+That file belongs to PR-03 and is edited there.
+
+**Risks and things noticed.**
+
+- *The `<FilesMatch>` deny list in `.htaccess` is already incomplete*, before
+  this PR: it names `bootstrap|helpers|page-renderer|seo|schema|form-security`
+  but `app/draft.php` and `app/form.php` exist and are not listed. Nothing is
+  exposed today, because a rewrite rule blocks `^app/` wholesale — but that is
+  precisely the `mod_rewrite` dependency PR-03 exists to remove. Handing PR-03
+  a list that is missing three names would have left the hardening half-done,
+  so PR-03 will complete the list rather than just append to it.
+- *`error_log()` goes wherever the host points it.* On Hostinger that is the
+  account's PHP error log; nothing in this repository configures a path, and
+  nothing should — a hardcoded path is a permissions failure waiting to
+  happen. Worth one line in the live-test checklist: confirm after the first
+  deploy that the log is actually reachable, because an error handler whose
+  logs nobody can read is only half a handler.
+- *`E_CORE_WARNING` and `E_COMPILE_WARNING` are treated as fatal* by the
+  shutdown handler. They are in the fatal mask because in practice they end
+  the request, but if a host emits one benignly at startup the site would
+  render a 500 for it. No such case is known on this stack; noted so the
+  symptom is recognisable if it ever appears.
+
+**Worth the owner's attention.** The 500 page is now reachable by real
+visitors for the first time, which makes its copy load-bearing rather than
+decorative. It currently says the problem is ours and has been logged — which
+is true. When the consultation form goes live it should probably also give a
+way to reach a human that does not depend on the site working, since a visitor
+who hits a 500 mid-enquiry has just lost what they typed.
