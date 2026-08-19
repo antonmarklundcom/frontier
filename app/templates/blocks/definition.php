@@ -14,13 +14,13 @@
     </div>
     <div class="def">
       <div class="def__main prose">
-        <?php foreach ((array) $b['body'] as $p): ?><p><?= $p ?></p><?php endforeach; ?>
+        <?php foreach ((array) $b['body_html'] as $p): ?><p><?= raw_html($p) ?></p><?php endforeach; ?>
       </div>
-      <?php if (!empty($b['not'])): ?>
+      <?php if (!empty($b['not_html'])): ?>
         <div class="def__not">
           <p class="def__notlabel"><?= e($b['not_label'] ?? 'What it is not') ?></p>
           <ul>
-            <?php foreach ((array) $b['not'] as $item): ?><li><?= $item ?></li><?php endforeach; ?>
+            <?php foreach ((array) $b['not_html'] as $item): ?><li><?= raw_html($item) ?></li><?php endforeach; ?>
           </ul>
         </div>
       <?php endif; ?>

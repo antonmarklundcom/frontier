@@ -26,7 +26,7 @@
   <div class="wrap hero__grid">
     <div class="hero__text">
       <p class="eyebrow"><?= e($b['eyebrow']) ?></p>
-      <h1><?= $b['h1_html'] ?></h1>
+      <h1><?= raw_html($b['h1_html']) ?></h1>
       <p class="hero__lede"><?= e($b['lede']) ?></p>
 
       <div class="hero__actions">

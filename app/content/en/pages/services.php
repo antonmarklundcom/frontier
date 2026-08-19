@@ -8,10 +8,10 @@ declare(strict_types=1);
 
 return [
 'faqs' => [
-  ['q' => 'Do I have to buy a package?',            'a' => ['{{ 60-90 words: the engagement shapes available, honestly described. }}']],
-  ['q' => 'Are you lawyers?',                       'a' => ['{{ 60-90 words: no — say exactly what we are, and when we bring in a lawyer or accountant. }}']],
-  ['q' => 'What if I only need one part of this?',  'a' => ['{{ 60-90 words: how partial engagements work. }}']],
-  ['q' => 'What happens at the first consultation?', 'a' => ['{{ 60-90 words: the working session, and that it can end in "do not proceed". }}']],
+  ['q' => 'Do I have to buy a package?',            'a_html' => ['{{ 60-90 words: the engagement shapes available, honestly described. }}']],
+  ['q' => 'Are you lawyers?',                       'a_html' => ['{{ 60-90 words: no — say exactly what we are, and when we bring in a lawyer or accountant. }}']],
+  ['q' => 'What if I only need one part of this?',  'a_html' => ['{{ 60-90 words: how partial engagements work. }}']],
+  ['q' => 'What happens at the first consultation?', 'a_html' => ['{{ 60-90 words: the working session, and that it can end in "do not proceed". }}']],
 ],
 'blocks' => [
 ['type' => 'page-header', 'eyebrow' => 'Services',
@@ -37,9 +37,9 @@ return [
 ['type' => 'faq', 'eyebrow' => 'Engagement questions', 'heading' => 'Before you enquire.'],
 ['type' => 'related', 'items' => [['page' => 'process'], ['page' => 'packages'], ['page' => 'integrity']]],
 ['type' => 'next-step', 'heading' => 'Start with a working session',
- 'body' => ['{{ 40-60 words: what the paid consultation produces. }}'],
+ 'body_html' => ['{{ 40-60 words: what the paid consultation produces. }}'],
  'cta' => ['page' => 'book', 'label' => 'Book a consultation'],
  'secondary' => ['page' => 'process', 'label' => 'How working with us works'],
- 'diy' => '{{ 30-50 words: who should not hire us. }}'],
+ 'diy_html' => '{{ 30-50 words: who should not hire us. }}'],
 ],
 ];

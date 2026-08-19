@@ -14,7 +14,7 @@
       <h2><?= e($b['heading'] ?? 'What this page rests on') ?></h2>
     </div>
     <div class="src">
-      <?php foreach ((array) ($b['intro'] ?? []) as $p): ?><p class="src__intro"><?= $p ?></p><?php endforeach; ?>
+      <?php foreach ((array) ($b['intro_html'] ?? []) as $p): ?><p class="src__intro"><?= raw_html($p) ?></p><?php endforeach; ?>
       <ol class="src__list">
         <?php foreach ($b['items'] as $s): $url = $s['url'] ?? ''; ?>
           <li class="src__item">
@@ -26,7 +26,7 @@
               <?php endif; ?>
             </span>
             <?php if (!empty($s['authority'])): ?><span class="src__auth"><?= e($s['authority']) ?></span><?php endif; ?>
-            <?php if (!empty($s['note'])): ?><span class="src__note"><?= $s['note'] ?></span><?php endif; ?>
+            <?php if (!empty($s['note_html'])): ?><span class="src__note"><?= raw_html($s['note_html']) ?></span><?php endif; ?>
           </li>
         <?php endforeach; ?>
       </ol>

@@ -17,7 +17,7 @@ return [
 
 ['type' => 'prose',
  'heading' => 'What happens now',
- 'body' => [
+ 'body_html' => [
    'We read what you sent and answer the question you actually asked. If your situation has a complication in it, we will say so in the reply rather than saving it for a call.',
    'If we think you do not need us, that is what the reply will say. It happens often enough to be worth putting in writing here.',
    'While you wait, the pages below are the ones most people find useful before a first conversation.',

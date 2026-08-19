@@ -15,7 +15,7 @@ return [
 
 ['type' => 'prose',
  'heading' => 'Where to go instead',
- 'body' => [
+ 'body_html' => [
    'Pages that exist but are not finished say so on the page itself; they do not return an error. So this is genuinely a wrong address rather than something still being written.',
    'The three routes below cover most of what people arrive looking for.',
  ],

@@ -173,6 +173,58 @@ if ($ht === false) {
 // page id in navigation.php makes page() return null and takes every page on
 // the site down with a TypeError — so if these ran after rendering, QA would
 // die on the symptom and never print the one line that names the cause.
+echo "\n== Escaping discipline ==\n";
+// PR-06's invariant, made permanent. Every short echo in a template must be
+// e() — escaped text — or raw_html() — trusted markup from an _html content
+// key. Nothing else. The point is not that a bare echo is always wrong; it is
+// that a bare echo is *invisible*, so nobody can review what they cannot find.
+// A reviewer reading raw_html() knows to ask where the string came from.
+$echoFiles = [];
+$rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(PF_APP . '/templates'));
+foreach ($rii as $f) {
+    if ($f->isFile() && $f->getExtension() === 'php') { $echoFiles[] = $f->getPathname(); }
+}
+sort($echoFiles);
+$bare = 0;
+foreach ($echoFiles as $f) {
+    foreach (file($f) as $n => $line) {
+        if (!str_contains($line, '<?=')) { continue; }
+        foreach (explode('<?=', $line) as $i => $part) {
+            if ($i === 0) { continue; }
+            $expr = ltrim($part);
+            if (str_starts_with($expr, 'e(') || str_starts_with($expr, 'raw_html(')
+                || str_starts_with($expr, '/*')) {
+                continue;
+            }
+            $bare++;
+            bad(sprintf('%s:%d echoes without e() or raw_html(): %s',
+                str_replace(PF_APP . '/', '', $f), $n + 1, trim(substr($expr, 0, 48))));
+        }
+    }
+}
+if ($bare === 0) { ok(count($echoFiles) . ' template(s): every echo goes through e() or raw_html()'); }
+
+// The other half of the convention: a key named *_html is the only thing
+// raw_html() may be handed from a content file. A raw_html() call reading a
+// key without the suffix means the data stopped announcing its own trust.
+$suffix = 0;
+foreach ($echoFiles as $f) {
+    $src = file_get_contents($f);
+    // Only a call whose ENTIRE argument is one array subscript is reading a
+    // content key. raw_html() wrapping an expression — a ternary over a
+    // status, a concatenation of e() calls — is trusted by construction, and
+    // the subscripts inside it are conditions, not the value being emitted.
+    if (preg_match_all('/raw_html\\(\\s*\\$[a-z_]+\\[\\s*\\x27([a-z_]+)\\x27\\s*\\]\\s*\\)/i', $src, $m)) {
+        foreach ($m[1] as $key) {
+            if (!str_ends_with($key, '_html')) {
+                bad(str_replace(PF_APP . '/', '', $f) . ": raw_html() reads '$key', which does not end in _html");
+                $suffix++;
+            }
+        }
+    }
+}
+if ($suffix === 0) { ok('every raw_html() content key carries the _html suffix'); }
+
 echo "\n== Rendered output ==\n";
 // Render as a visitor would see the site, whatever the local preview setting
 // is: an author's preview flag must never be able to hide a leak from QA.

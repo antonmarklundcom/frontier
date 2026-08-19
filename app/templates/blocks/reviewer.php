@@ -14,11 +14,11 @@ $date     = $page['last_reviewed'] ?? null;
 ?>
 <section class="rev-sec">
   <div class="wrap">
-    <div class="rev<?= $reviewer ? '' : ' rev--pending' ?>">
-      <p class="rev__label"><?= $reviewer ? 'Professional review' : 'Not yet reviewed' ?></p>
+    <div class="rev<?= e($reviewer ? '' : ' rev--pending') ?>">
+      <p class="rev__label"><?= e($reviewer ? 'Professional review' : 'Not yet reviewed') ?></p>
       <?php if ($reviewer): ?>
         <p class="rev__body">
-          This page was reviewed by <strong><?= e($reviewer) ?></strong><?= $date ? ' on <time datetime="' . e($date) . '">' . e(review_date($date)) . '</time>' : '' ?>.
+          This page was reviewed by <strong><?= e($reviewer) ?></strong><?= raw_html($date ? ' on <time datetime="' . e($date) . '">' . e(review_date($date)) . '</time>' : '') ?>.
           Review covers whether the procedure described matches current Paraguayan practice. It is not
           advice on your own situation, and it does not make this page a substitute for engaging a
           <?= e($kind) ?> on facts specific to you.

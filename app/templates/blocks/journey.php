@@ -9,7 +9,7 @@
 
     <div class="journey__grid" style="margin-top:var(--s-12)">
       <?php foreach ($b['steps'] as $i => $step): ?>
-        <div class="journey__step" data-reveal="<?= $i ?>">
+        <div class="journey__step" data-reveal="<?= e((string) $i) ?>">
           <p class="journey__who"><?= e($step['who']) ?></p>
           <h3><?= e($step['title']) ?></h3>
           <p class="journey__note"><?= e($step['note']) ?></p>

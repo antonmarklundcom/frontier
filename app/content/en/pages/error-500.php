@@ -15,7 +15,7 @@ return [
 
 ['type' => 'prose',
  'heading' => 'What to do',
- 'body' => [
+ 'body_html' => [
    'Reload the page in a minute. If it fails again, use the contact details in the footer — those do not depend on whatever is broken here.',
    'If you were part-way through sending an enquiry, please send it again. We would rather receive it twice than not at all.',
  ],
