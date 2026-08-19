@@ -19,9 +19,9 @@
       <ul class="router__options" data-router-options aria-label="<?= e($b['heading']) ?>">
         <?php foreach ($b['options'] as $i => $opt): ?>
           <li>
-            <a class="router__opt" id="rtab-<?= $i ?>" href="#rpane-<?= $i ?>"
+            <a class="router__opt" id="rtab-<?= e((string) $i) ?>" href="#rpane-<?= e((string) $i) ?>"
                data-ev="router_select" data-ev-loc="<?= e($opt['slug']) ?>">
-              <span class="router__num"><?= str_pad((string)($i + 1), 2, '0', STR_PAD_LEFT) ?></span>
+              <span class="router__num"><?= e(str_pad((string)($i + 1), 2, '0', STR_PAD_LEFT)) ?></span>
               <span><?= e($opt['label']) ?></span>
             </a>
           </li>
@@ -30,7 +30,7 @@
 
       <div class="router__body">
         <?php foreach ($b['options'] as $i => $opt): ?>
-          <div class="router__pane" id="rpane-<?= $i ?>" data-router-pane>
+          <div class="router__pane" id="rpane-<?= e((string) $i) ?>" data-router-pane>
             <h3><?= e($opt['heading']) ?></h3>
             <p><?= e($opt['body']) ?></p>
             <ul class="router__links">

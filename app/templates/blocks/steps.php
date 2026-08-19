@@ -11,18 +11,18 @@
     <div class="steps__head">
       <p class="eyebrow"><?= e($b['eyebrow'] ?? 'The sequence') ?></p>
       <?php if (!empty($b['heading'])): ?><h2><?= e($b['heading']) ?></h2><?php endif; ?>
-      <?php foreach ((array) ($b['intro'] ?? []) as $p): ?><p class="lede"><?= $p ?></p><?php endforeach; ?>
+      <?php foreach ((array) ($b['intro_html'] ?? []) as $p): ?><p class="lede"><?= raw_html($p) ?></p><?php endforeach; ?>
     </div>
 
     <ol class="steps">
       <?php foreach ($b['items'] as $i => $s): ?>
         <li class="steps__item">
-          <span class="steps__idx"><?= str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT) ?></span>
+          <span class="steps__idx"><?= e(str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT)) ?></span>
           <div class="steps__body">
             <h3><?= e($s['title']) ?></h3>
-            <?php foreach ((array) $s['body'] as $p): ?><p><?= $p ?></p><?php endforeach; ?>
-            <?php if (!empty($s['blocker'])): ?>
-              <p class="steps__blocker"><span>Most common hold-up</span> <?= $s['blocker'] ?></p>
+            <?php foreach ((array) $s['body_html'] as $p): ?><p><?= raw_html($p) ?></p><?php endforeach; ?>
+            <?php if (!empty($s['blocker_html'])): ?>
+              <p class="steps__blocker"><span>Most common hold-up</span> <?= raw_html($s['blocker_html']) ?></p>
             <?php endif; ?>
           </div>
           <?php if (!empty($s['who'])): ?>
@@ -32,6 +32,6 @@
       <?php endforeach; ?>
     </ol>
 
-    <?php if (!empty($b['footnote'])): ?><p class="steps__foot"><?= $b['footnote'] ?></p><?php endif; ?>
+    <?php if (!empty($b['footnote_html'])): ?><p class="steps__foot"><?= raw_html($b['footnote_html']) ?></p><?php endif; ?>
   </div>
 </section>

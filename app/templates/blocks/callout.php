@@ -4,7 +4,7 @@
   <div class="wrap">
     <div class="callout callout--wide">
       <span class="callout__label"><?= e($b['label']) ?></span>
-      <?php foreach ((array) $b['body'] as $p): ?><p><?= $p ?></p><?php endforeach; ?>
+      <?php foreach ((array) $b['body_html'] as $p): ?><p><?= raw_html($p) ?></p><?php endforeach; ?>
     </div>
   </div>
 </section>

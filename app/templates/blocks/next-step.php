@@ -12,7 +12,7 @@
       <div class="next__text">
         <p class="eyebrow"><?= e($b['eyebrow'] ?? 'Next step') ?></p>
         <h2><?= e($b['heading']) ?></h2>
-        <?php foreach ((array) $b['body'] as $p): ?><p><?= $p ?></p><?php endforeach; ?>
+        <?php foreach ((array) $b['body_html'] as $p): ?><p><?= raw_html($p) ?></p><?php endforeach; ?>
       </div>
       <div class="next__act">
         <a class="btn btn--primary" href="<?= e(href(page_url($b['cta']['page']))) ?>"
@@ -22,8 +22,8 @@
         <?php endif; ?>
       </div>
     </div>
-    <?php if (!empty($b['diy'])): ?>
-      <p class="next__diy"><?= $b['diy'] ?></p>
+    <?php if (!empty($b['diy_html'])): ?>
+      <p class="next__diy"><?= raw_html($b['diy_html']) ?></p>
     <?php endif; ?>
   </div>
 </section>

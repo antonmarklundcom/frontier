@@ -8,7 +8,7 @@
  * the answer changes, and is required — an answer with no stated limit is the
  * house style of the sites this one is written against.
  */
-$points = $b['points'] ?? [];
+$points = $b['points_html'] ?? [];
 ?>
 <section class="qa-sec" id="<?= e($b['id'] ?? 'answer') ?>">
   <div class="wrap">
@@ -16,15 +16,15 @@ $points = $b['points'] ?? [];
       <p class="eyebrow"><?= e($b['eyebrow'] ?? 'The short answer') ?></p>
       <?php if (!empty($b['question'])): ?><h2 class="qanswer__q"><?= e($b['question']) ?></h2><?php endif; ?>
       <div class="qanswer__body">
-        <?php foreach ((array) $b['answer'] as $p): ?><p><?= $p ?></p><?php endforeach; ?>
+        <?php foreach ((array) $b['answer_html'] as $p): ?><p><?= raw_html($p) ?></p><?php endforeach; ?>
       </div>
       <?php if ($points): ?>
         <ul class="qanswer__points">
-          <?php foreach ($points as $point): ?><li><?= $point ?></li><?php endforeach; ?>
+          <?php foreach ($points as $point): ?><li><?= raw_html($point) ?></li><?php endforeach; ?>
         </ul>
       <?php endif; ?>
-      <?php if (!empty($b['caveat'])): ?>
-        <p class="qanswer__caveat"><span>Where this stops being true</span> <?= $b['caveat'] ?></p>
+      <?php if (!empty($b['caveat_html'])): ?>
+        <p class="qanswer__caveat"><span>Where this stops being true</span> <?= raw_html($b['caveat_html']) ?></p>
       <?php endif; ?>
     </div>
   </div>

@@ -12,7 +12,7 @@ $cols = $b['columns'];
     <div class="cmp__head">
       <p class="eyebrow"><?= e($b['eyebrow'] ?? 'Side by side') ?></p>
       <?php if (!empty($b['heading'])): ?><h2><?= e($b['heading']) ?></h2><?php endif; ?>
-      <?php foreach ((array) ($b['intro'] ?? []) as $p): ?><p class="lede"><?= $p ?></p><?php endforeach; ?>
+      <?php foreach ((array) ($b['intro_html'] ?? []) as $p): ?><p class="lede"><?= raw_html($p) ?></p><?php endforeach; ?>
     </div>
 
     <div class="cmp__scroll">
@@ -28,8 +28,8 @@ $cols = $b['columns'];
           <?php foreach ($b['rows'] as $row): ?>
             <tr>
               <th scope="row"><?= e($row['label']) ?></th>
-              <?php foreach ($row['cells'] as $i => $cell): ?>
-                <td data-col="<?= e($cols[$i] ?? '') ?>"><?= $cell ?></td>
+              <?php foreach ($row['cells_html'] as $i => $cell): ?>
+                <td data-col="<?= e($cols[$i] ?? '') ?>"><?= raw_html($cell) ?></td>
               <?php endforeach; ?>
             </tr>
           <?php endforeach; ?>
@@ -37,6 +37,6 @@ $cols = $b['columns'];
       </table>
     </div>
 
-    <?php if (!empty($b['footnote'])): ?><p class="cmp__foot"><?= $b['footnote'] ?></p><?php endif; ?>
+    <?php if (!empty($b['footnote_html'])): ?><p class="cmp__foot"><?= raw_html($b['footnote_html']) ?></p><?php endif; ?>
   </div>
 </section>

@@ -14,7 +14,7 @@
     <div class="know__list">
       <?php foreach ($b['items'] as $i => $item): $p = page($item['page']); ?>
         <a class="know__item" href="<?= e(href($p['url'])) ?>" data-ev="guide_click" data-ev-loc="knowledge">
-          <span class="know__idx"><?= str_pad((string)($i + 1), 2, '0', STR_PAD_LEFT) ?></span>
+          <span class="know__idx"><?= e(str_pad((string)($i + 1), 2, '0', STR_PAD_LEFT)) ?></span>
           <span>
             <span class="know__name"><?= e($item['title']) ?></span>
             <span class="know__desc"><?= e($item['body']) ?></span>

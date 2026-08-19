@@ -10,7 +10,7 @@ $ogImage   = og_image($page);
 <meta name="robots" content="<?= e(robots_directive($page)) ?>">
 <link rel="canonical" href="<?= e($canonical) ?>">
 
-<meta property="og:type" content="<?= ($page['type'] ?? '') === 'article' ? 'article' : 'website' ?>">
+<meta property="og:type" content="<?= e(($page['type'] ?? '') === 'article' ? 'article' : 'website') ?>">
 <meta property="og:site_name" content="<?= e((string) site('name')) ?>">
 <meta property="og:title" content="<?= e($page['title']) ?>">
 <meta property="og:description" content="<?= e($page['description']) ?>">
@@ -67,5 +67,5 @@ if ($alternates !== []):
 })();
 </script>
 
-<script type="application/ld+json"><?= json_encode(schema_graph($page, $crumbs), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?></script>
+<script type="application/ld+json"><?= raw_html(json_encode(schema_graph($page, $crumbs), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) ?></script>
 </head>

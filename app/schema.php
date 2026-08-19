@@ -104,7 +104,10 @@ function schema_graph(array $page, array $crumbs): array
         $entities = [];
         foreach ($faqs as $faq) {
             // An answer may be a string or a list of paragraphs.
-            $answer = is_array($faq['a']) ? implode(' ', $faq['a']) : (string) $faq['a'];
+            // 'a_html' carries trusted markup, like every _html key. Schema.org
+            // wants plain text, so it is stripped here rather than escaped —
+            // structured data with <em> in it is data a parser has to clean.
+            $answer = is_array($faq['a_html']) ? implode(' ', $faq['a_html']) : (string) $faq['a_html'];
             $entities[] = [
                 '@type' => 'Question',
                 'name'  => $faq['q'],

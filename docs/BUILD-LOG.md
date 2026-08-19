@@ -515,3 +515,97 @@ registry rather than a browser. That ratio is why the gate is worth having: it
 is cheap enough that nobody is tempted to skip it. The thing it still cannot
 check is whether a sentence is *true* — which remains the only quality gate on
 this project that a person has to perform.
+
+---
+
+## 2026-08-19 — PR-06 · raw-HTML discipline
+
+**Shipped.** `raw_html()` in `app/helpers.php` is now the site's entire
+raw-HTML trust boundary, every raw-echoed content key carries an `_html`
+suffix, and two QA checks make both permanent.
+
+The invariant, stated as the test that proves it:
+
+```
+grep -rn '<?=' app/templates | grep -vE '<\?=\s*(e\(|raw_html\()'
+```
+
+comes back **empty**. Every short echo in all 33 templates is either `e()` —
+escaped text — or `raw_html()` — trusted markup from an `_html` key. The point
+is not that a bare echo is always wrong; it is that a bare echo is
+*invisible*, so nobody can review what they cannot find.
+
+**The card was written before the templates it names existed, so this was
+bigger than it looks.** It lists five raw-echo templates (`hero`, `statement`,
+`prose`, `faq`, `callout`). Phase 2a landed on `main` afterwards and added
+eight more that echo content raw — `checklist`, `comparison`, `definition`,
+`next-step`, `quick-answer`, `sources`, `steps`, `form` — plus computed echoes
+in another six. Doing only the five named would have left the acceptance test
+failing, so all thirteen were done. Same reasoning as PR-10 becoming an audit:
+the card describes an older codebase, the invariant is the real deliverable.
+
+**Renamed keys** (~500 occurrences across 31 content files), scoped per block
+type rather than globally, because the same key name means different things in
+different blocks — `page-header`'s `intro` is escaped while `checklist`'s is
+raw, and `related`'s item `note` is escaped while `sources`' is raw. A global
+find-and-replace would have been wrong in both directions.
+
+**How the rename was made safe.** Templates read **only** the `_html` key, with
+no fallback to the old name. That turns any missed rename into an empty
+element, which the byte-identity test catches immediately — and it did: it
+found `app/schema.php` reading `$faq['a']` to build FAQPage structured data,
+a site outside the templates entirely that a template-only audit would have
+missed. All 32 routes now render **byte for byte identical** to before.
+
+**Two QA checks**, both proved against a seeded fault: every template echo goes
+through `e()` or `raw_html()`, and every content key `raw_html()` reads ends in
+`_html`.
+
+**Things the new checks found that the grep did not.** Three echoes the
+acceptance grep missed because they sit mid-line or inside a multi-line
+expression: a `selected` attribute in the form's stage select, a
+`data-reveal` index in `pathways`, and the reviewer block's inline `<time>`
+element. A grep over source text finds what it is shaped to find; the check
+parses every `<?=` on every line, which is why it is the thing that stays.
+
+**Deliberately skipped.** The hardcoded English still sitting in `sources.php`,
+`reviewer.php`, `form.php` and `draft-notice.php` — that is PR-10's card, and
+PR-04's entry already flagged it. The `header.php` null-page guard from PR-05's
+entry — also PR-10.
+
+**Risks and things noticed.**
+
+- *`docs/COPY-BRIEF.md` was stale before this PR touched it.* Regenerating it
+  after the rename changed the count from 811 passages to **796**: fifteen of
+  those had already been written (`/book-consultation/`) and the committed
+  brief had never been regenerated. Nobody was misled yet, but the writer's
+  worklist was quietly describing a codebase that had moved. It is generated
+  from the content files by `php tools/copy-brief.php`, exactly like
+  `sitemap.xml` is generated from the registry — and `sitemap.xml` has a
+  validation gate while this does not. **Adding a fifth gate for it is the
+  single cheapest improvement available right now**, and it is deliberately not
+  done here because the gate belongs to PR-01's card, not this one.
+- *The `_html` rename shifts every path label in `COPY-BRIEF.md`.* Chat 2 is
+  writing against that file. The brief *text* is unchanged and the writing task
+  is unchanged — only the path labels move (`blocks.4(steps).items.0.body`
+  becomes `…body_html`). A writer mid-file should regenerate rather than
+  reconcile by hand.
+- *`raw_html()` cannot enforce its own contract*, and should not pretend to. It
+  rejects arrays and nulls, which are template bugs, but a string containing a
+  `<script>` tag passes through — that is what "trusted" means. The enforcement
+  is social and structural: the value comes from a content file written by
+  someone with commit access, and the `_html` suffix makes that visible at the
+  data. Nothing in this codebase renders visitor input as HTML. **Nothing
+  should start**, and the day something does, this helper is the first place to
+  re-read.
+- *One echo carries an inline comment* (`related.php`) to explain why a
+  ternary of `e()` calls is trusted by construction. The QA check accepts
+  `<?= /* … */` as a third form. That is a small hole — a comment could in
+  principle precede anything — but a bare echo hidden behind a comment is a
+  deliberate act, not an accident, and the check exists to catch accidents.
+
+**Worth the owner's attention.** With this merged, the answer to "could this
+site have an XSS hole" is checkable rather than arguable: there are exactly
+two functions that put a value into HTML, one escapes and one does not, and QA
+fails the build if a third way appears. That is worth more than it sounds on a
+site whose whole positioning is that it can be trusted with careful reading.

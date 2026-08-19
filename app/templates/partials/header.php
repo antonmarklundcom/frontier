@@ -2,7 +2,7 @@
 $nav = navigation()['primary'];
 $onDark = ($page['hero_theme'] ?? 'light') === 'ink';
 ?>
-<header class="masthead <?= $onDark ? 'masthead--over-dark' : '' ?>" data-sticky-header>
+<header class="masthead <?= e($onDark ? 'masthead--over-dark' : '') ?>" data-sticky-header>
   <div class="masthead__inner wrap">
 
     <a class="wordmark" href="/" aria-label="<?= e(t('wordmark_home_aria')) ?>">
@@ -21,13 +21,13 @@ $onDark = ($page['hero_theme'] ?? 'light') === 'ink';
       <ul class="nav__list">
         <?php foreach ($nav as $i => $item):
             $hasPanel = !empty($item['children']); ?>
-          <li class="nav__item <?= $hasPanel ? 'nav__item--has-panel' : '' ?>">
+          <li class="nav__item <?= e($hasPanel ? 'nav__item--has-panel' : '') ?>">
             <?php if ($hasPanel): ?>
-              <button type="button" class="nav__link" aria-expanded="false" aria-controls="navpanel-<?= $i ?>">
+              <button type="button" class="nav__link" aria-expanded="false" aria-controls="navpanel-<?= e((string) $i) ?>">
                 <?= e($item['label']) ?>
                 <svg class="nav__chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
               </button>
-              <div class="panel" id="navpanel-<?= $i ?>" hidden>
+              <div class="panel" id="navpanel-<?= e((string) $i) ?>" hidden>
                 <ul class="panel__list">
                   <?php foreach ($item['children'] as $child): $cp = page($child['page']); ?>
                     <li>

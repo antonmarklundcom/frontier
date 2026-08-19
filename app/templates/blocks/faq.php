@@ -14,14 +14,14 @@ if (!$faqs) { return; }
     </div>
     <div class="faq">
       <?php foreach ($faqs as $i => $f): ?>
-        <details class="faq__item"<?= $i === 0 ? ' open' : '' ?>>
+        <details class="faq__item"<?= raw_html($i === 0 ? ' open' : '') ?>>
           <summary class="faq__q">
             <span><?= e($f['q']) ?></span>
             <svg class="faq__icon" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
               <path d="M7 1v12M1 7h12" fill="none" stroke="currentColor" stroke-width="1.6"/>
             </svg>
           </summary>
-          <div class="faq__a"><?php foreach ((array) $f['a'] as $p): ?><p><?= $p ?></p><?php endforeach; ?></div>
+          <div class="faq__a"><?php foreach ((array) $f['a_html'] as $p): ?><p><?= raw_html($p) ?></p><?php endforeach; ?></div>
         </details>
       <?php endforeach; ?>
     </div>

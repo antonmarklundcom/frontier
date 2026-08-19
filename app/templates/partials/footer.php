@@ -33,7 +33,7 @@ $email = real('email');
     <div class="foot__bottom">
       <p class="foot__disclaimer"><strong><?= e(t('disclaimer_label')) ?></strong> <?= e(t('disclaimer')) ?></p>
       <p class="foot__legal">
-        &copy; <?= date('Y') ?> Paraguay Frontier.
+        &copy; <?= e(date('Y')) ?> Paraguay Frontier.
         <?php if ($reg = real('company_reg')): ?><span><?= e($reg) ?></span><?php endif; ?>
       </p>
     </div>

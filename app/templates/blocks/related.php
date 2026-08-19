@@ -8,9 +8,10 @@
           <h3><?= e($p['nav_label'] ?? $p['h1']) ?></h3>
           <p><?= e($item['note'] ?? $p['description']) ?></p>
           <span class="guides__stamp">
-            <?= $p['status'] === 'live' && !empty($p['last_reviewed'])
+            <?= /* Both branches are escaped or literal: trusted by construction. */
+                raw_html($p['status'] === 'live' && !empty($p['last_reviewed'])
                 ? e(t('last_reviewed')) . ' ' . e(review_date($p['last_reviewed']))
-                : 'In preparation' ?>
+                : e(t('nav_state_in_preparation'))) ?>
           </span>
         </a>
       <?php endforeach; ?>

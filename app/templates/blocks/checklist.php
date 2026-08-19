@@ -13,20 +13,20 @@ $groups = $b['groups'] ?? [];
     <div class="check__head">
       <p class="eyebrow"><?= e($b['eyebrow'] ?? 'Checklist') ?></p>
       <?php if (!empty($b['heading'])): ?><h2><?= e($b['heading']) ?></h2><?php endif; ?>
-      <?php foreach ((array) ($b['intro'] ?? []) as $p): ?><p class="lede"><?= $p ?></p><?php endforeach; ?>
+      <?php foreach ((array) ($b['intro_html'] ?? []) as $p): ?><p class="lede"><?= raw_html($p) ?></p><?php endforeach; ?>
     </div>
 
     <?php foreach ($groups as $g): ?>
       <div class="check__group">
         <h3 class="check__gtitle"><?= e($g['title']) ?></h3>
-        <?php if (!empty($g['note'])): ?><p class="check__gnote"><?= $g['note'] ?></p><?php endif; ?>
+        <?php if (!empty($g['note_html'])): ?><p class="check__gnote"><?= raw_html($g['note_html']) ?></p><?php endif; ?>
         <ul class="check__list">
           <?php foreach ($g['items'] as $item): ?>
             <li class="check__item">
               <span class="check__box" aria-hidden="true"></span>
               <span class="check__text">
-                <span class="check__name"><?= $item['item'] ?></span>
-                <?php if (!empty($item['note'])): ?><span class="check__note"><?= $item['note'] ?></span><?php endif; ?>
+                <span class="check__name"><?= raw_html($item['item_html']) ?></span>
+                <?php if (!empty($item['note_html'])): ?><span class="check__note"><?= raw_html($item['note_html']) ?></span><?php endif; ?>
               </span>
               <span class="check__meta">
                 <?php if (!empty($item['who'])): ?><span class="tag"><?= e($item['who']) ?></span><?php endif; ?>
@@ -38,8 +38,8 @@ $groups = $b['groups'] ?? [];
       </div>
     <?php endforeach; ?>
 
-    <?php if (!empty($b['footnote'])): ?>
-      <p class="check__foot"><?= $b['footnote'] ?></p>
+    <?php if (!empty($b['footnote_html'])): ?>
+      <p class="check__foot"><?= raw_html($b['footnote_html']) ?></p>
     <?php endif; ?>
   </div>
 </section>
