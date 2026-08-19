@@ -105,3 +105,71 @@ is the owner's call, and nothing in Batch 0 depends on it.
 briefs — that is the actual remaining shape of this project, and it is a
 writing job, not an engineering one. Batch 0 makes that writing cheaper and
 safer to land; it does not shorten it.
+
+---
+
+## 2026-08-19 — PR-01 · the validation gate
+
+**Shipped.** `tools/validate.php` runs four gates and exits non-zero on the
+first failure (`--all` to see every one): tracked-file `php -l`,
+`tools/qa.php`, `tools/build-release.php`, and a sitemap-freshness check that
+regenerates `sitemap.xml`, compares it to the committed file and always puts
+the committed file back — the gate reports, it never edits the working tree.
+`.githooks/pre-push` runs it; `tools/install-hooks.php` points
+`core.hooksPath` at the versioned hooks directory. `docs/VALIDATION.md`
+explains all of it, including the bypass and its cost.
+
+Each gate was verified by seeding a fault and watching it fail, then removing
+the seed: a broken tracked PHP file (syntax), a duplicated registry title
+(qa, and release with it, since the release builder re-runs QA before
+packaging), and a truncated `sitemap.xml` (sitemap). The hook was verified by
+attempting a real push with a seeded fault and watching it refuse.
+
+**The decision behind it.** The card originally specified
+`.github/workflows/ci.yml`. Owner decision this session: the repository is
+private, so Actions minutes are metered against the account, and the deploy
+path never touches a GitHub runner — Hostinger pulls from git and builds on
+its own servers. The four gates are the same four commands either way, and
+locally they cost nothing. `docs/VALIDATION.md` states what that forfeits
+rather than leaving it to be rediscovered: no gate on edits made in the
+GitHub web UI, no required status check on a protected branch, and therefore
+no true "GitHub refuses to merge until green" — merging is now a person
+seeing the gate pass and then merging.
+
+**One small scope addition, deliberately.** `.claude/settings.json` runs
+`tools/install-hooks.php` on session start. Git never ships hooks to a clone,
+so hooks are per-checkout — and this project is built by automated sessions in
+fresh containers that would each start ungated. Without this, the gate would
+have been real on a laptop and theatre everywhere the work actually happens.
+It is three lines and it is the difference between the PR working and looking
+like it works.
+
+**Deliberately skipped.** No `.github/` directory was created, not even a
+disabled workflow. No pre-commit hook — the gate runs the release build, which
+is too slow to sit in front of every commit, and blocking at push is where it
+buys the protection. No lint-staged-style partial validation; the tree is
+small enough that whole-tree checks finish in seconds.
+
+**Risks and things noticed.**
+
+- *The gate can be walked around and that is intentional.* `--no-verify`
+  exists, and anyone who has not run the installer is ungated. This is the
+  accepted cost of the zero-minutes decision, written down in
+  `docs/VALIDATION.md` so it is a known trade rather than a discovered hole.
+- *`tools/build-release.php` writes a zip into `release/` on every run*, so
+  every validation leaves a build artifact behind. `release/` is gitignored so
+  nothing reaches the repository, but the directory grows unbounded on a
+  long-lived checkout. Not fixed — out of scope for this card, and harmless in
+  ephemeral containers. Worth a `--dry-run` flag on the release builder if it
+  ever becomes annoying.
+- *The sitemap gate is the one most likely to surprise someone.* It fails on a
+  perfectly good change if the registry moved and nobody re-ran
+  `tools/build-sitemap.php`. That is the point, but the failure message now
+  names the exact command to run, because a gate that fails without telling
+  you what to type is a gate people learn to bypass.
+
+**Worth the owner's attention.** GitHub's default branch is still
+`claude/paraguay-frontier-mvp-e2e4ju`, not `main`. This is now the second log
+entry saying so. Every PR in this batch is opened explicitly against `main`,
+so the work is unaffected — but a fresh clone still lands on the older line,
+and that will eventually bite someone.
