@@ -5,7 +5,7 @@ $onDark = ($page['hero_theme'] ?? 'light') === 'ink';
 <header class="masthead <?= $onDark ? 'masthead--over-dark' : '' ?>" data-sticky-header>
   <div class="masthead__inner wrap">
 
-    <a class="wordmark" href="/" aria-label="Paraguay Frontier — home">
+    <a class="wordmark" href="/" aria-label="<?= e(t('wordmark_home_aria')) ?>">
       <svg class="wordmark__mark" width="26" height="26" viewBox="0 0 26 26" aria-hidden="true" focusable="false">
         <circle cx="13" cy="13" r="11.25" fill="none" stroke="currentColor" stroke-width="1.5"/>
         <path d="M13 1.75V24.25M1.75 13H24.25" stroke="currentColor" stroke-width="1" opacity=".45"/>
@@ -17,7 +17,7 @@ $onDark = ($page['hero_theme'] ?? 'light') === 'ink';
       </span>
     </a>
 
-    <nav class="nav" aria-label="Primary">
+    <nav class="nav" aria-label="<?= e(t('nav_primary_label')) ?>">
       <ul class="nav__list">
         <?php foreach ($nav as $i => $item):
             $hasPanel = !empty($item['children']); ?>
@@ -33,7 +33,7 @@ $onDark = ($page['hero_theme'] ?? 'light') === 'ink';
                     <li>
                       <a class="panel__link" href="<?= e(href($cp['url'])) ?>">
                         <span class="panel__label"><?= e($child['label']) ?></span>
-                        <?php if ($cp['status'] !== 'live'): ?><span class="panel__state">In preparation</span><?php endif; ?>
+                        <?php if ($cp['status'] !== 'live'): ?><span class="panel__state"><?= e(t('nav_state_in_preparation')) ?></span><?php endif; ?>
                       </a>
                     </li>
                   <?php endforeach; ?>
@@ -59,7 +59,7 @@ $onDark = ($page['hero_theme'] ?? 'light') === 'ink';
 </header>
 
 <div class="drawer" id="mobile-nav" hidden>
-  <nav class="drawer__inner" aria-label="Mobile">
+  <nav class="drawer__inner" aria-label="<?= e(t('nav_mobile_label')) ?>">
     <?php foreach ($nav as $item): ?>
       <?php $top = page($item['page']); ?>
       <div class="drawer__group">

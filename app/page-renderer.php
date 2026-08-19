@@ -1,68 +1,100 @@
 <?php
 declare(strict_types=1);
 
-/** Load the registry once per request. */
-function registry(): array
+/**
+ * The three content indexes, one per locale.
+ *
+ * Each is loaded once per locale per request. The caches are keyed by locale
+ * rather than being single-valued, because tools/qa.php and the sitemap
+ * builder legitimately read more than one locale in a single process.
+ *
+ * $locale defaults to the current request's locale, so the ~200 existing call
+ * sites that never pass one keep working unchanged.
+ */
+function registry(?string $locale = null): array
 {
-    static $r = null;
-    if ($r === null) {
-        $r = require PF_APP . '/content/en/registry.php';
-    }
-    return $r;
+    static $cache = [];
+    $locale = $locale ?? locale();
+    return $cache[$locale] ??= require PF_APP . '/content/' . $locale . '/registry.php';
 }
 
-function navigation(): array
+function navigation(?string $locale = null): array
 {
-    static $n = null;
-    if ($n === null) {
-        $n = require PF_APP . '/content/en/navigation.php';
-    }
-    return $n;
+    static $cache = [];
+    $locale = $locale ?? locale();
+    return $cache[$locale] ??= require PF_APP . '/content/' . $locale . '/navigation.php';
 }
 
-function strings(): array
+function strings(?string $locale = null): array
 {
-    static $s = null;
-    if ($s === null) {
-        $s = require PF_APP . '/content/en/global.php';
-    }
-    return $s;
+    static $cache = [];
+    $locale = $locale ?? locale();
+    return $cache[$locale] ??= require PF_APP . '/content/' . $locale . '/global.php';
 }
 
-function t(string $key): string
+/**
+ * A locale-wide string. Returning the key itself when it is missing is
+ * deliberate: a missing string shows up as an obvious token in the page rather
+ * than as a blank space nobody notices, and tools/qa.php can grep for it.
+ */
+function t(string $key, ?string $locale = null): string
 {
-    return strings()[$key] ?? $key;
+    return strings($locale)[$key] ?? $key;
+}
+
+/**
+ * A string with values interpolated, e.g. a greeting carrying a page name.
+ * Translators get one sentence with a placeholder rather than a sentence
+ * assembled from fragments in a template, which is the difference between a
+ * translatable string and an untranslatable one.
+ */
+function t_format(string $key, string ...$values): string
+{
+    return vsprintf(t($key), $values);
 }
 
 /** Registry entry for a page id, with its id folded in. */
-function page(string $id): ?array
+function page(string $id, ?string $locale = null): ?array
 {
-    $r = registry();
+    $r = registry($locale);
     if (!isset($r[$id])) {
         return null;
     }
     return $r[$id] + ['id' => $id];
 }
 
-/** href for a page id — the only way templates should build internal links. */
-function page_url(string $id): string
+/**
+ * URL for a page id — the only way templates should build internal links.
+ *
+ * Locale is carried by the registry entry, not bolted on here: each locale has
+ * its own registry with its own 'url' values, so a Spanish page's URL is
+ * already '/es/guias/...' when it is read. That is what makes localised slugs
+ * possible instead of a translated site living under translated-in-place
+ * paths, and it is why href() needs no locale parameter — by the time a URL
+ * reaches it, the locale is already in the string.
+ */
+function page_url(string $id, ?string $locale = null): string
 {
-    $p = page($id);
+    $p = page($id, $locale);
     return $p ? $p['url'] : '/';
 }
 
-function page_title(string $id): string
+function page_title(string $id, ?string $locale = null): string
 {
-    $p = page($id);
+    $p = page($id, $locale);
     return $p['h1'] ?? $id;
 }
 
 /**
  * Render a full page. Called by every public entrypoint.
  */
-function render_page(string $id, int $httpStatus = 200): void
+function render_page(string $id, string $locale = 'en', int $httpStatus = 200): void
 {
-    $resolved = resolve_page($id);
+    // The one place the request's locale is decided. Everything downstream
+    // reads locale() rather than being passed it.
+    $locale = set_locale($locale);
+
+    $resolved = resolve_page($id, $locale);
     if ($resolved === null) {
         http_response_code(500);
         echo 'Unknown page id: ' . e($id);
@@ -88,7 +120,7 @@ function render_page(string $id, int $httpStatus = 200): void
         }
     }
 
-    $crumbs = breadcrumbs($page, registry());
+    $crumbs = breadcrumbs($page, registry($locale));
 
     if ($httpStatus !== 200 && !headers_sent()) {
         http_response_code($httpStatus);

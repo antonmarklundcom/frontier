@@ -10,7 +10,7 @@
 $rail = $page['rail'] ?? [];
 if (!$rail) { return; }
 ?>
-<nav class="rail" aria-label="Page sections" data-rail>
+<nav class="rail" aria-label="<?= e(t('rail_label')) ?>" data-rail>
   <span class="rail__track" aria-hidden="true"><span class="rail__progress" data-rail-progress></span></span>
   <ol class="rail__list">
     <?php foreach ($rail as $i => $stop): ?>

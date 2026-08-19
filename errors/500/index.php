@@ -1,3 +1,3 @@
 <?php
 require __DIR__ . '/../../app/bootstrap.php';
-render_page('error-500', 500);
+render_page('error-500', 'en', 500);

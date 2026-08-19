@@ -36,12 +36,16 @@ return [
         ['label' => 'About',    'page' => 'about'],
     ],
 
+    // Footer columns. The heading is a labelled value rather than an array key:
+    // a key cannot be translated without changing the structure, and a
+    // structure that differs per locale is a structure every template has to
+    // special-case. 'pages' lists registry ids, so a URL change propagates.
     'footer' => [
-        'Services' => ['services.residency', 'services.permanent-residency', 'services.ruc', 'services.banking', 'packages', 'process'],
-        'Residency guides' => ['guides.residency', 'guides.residency.requirements', 'guides.residency.documents', 'guides.residency.costs', 'guides.residency.timeline', 'guides.residency.temporary-vs-permanent', 'guides.residency.maintaining'],
-        'Tax & banking' => ['guides.tax', 'guides.tax.territorial', 'guides.tax.vs-legal', 'guides.tax.ruc', 'guides.banking'],
-        'Paraguay' => ['guides.living', 'guides.citizenship'],
-        'Company' => ['about', 'integrity', 'editorial-standards', 'faq', 'book'],
-        'Legal' => ['privacy', 'terms'],
+        ['heading' => 'Services',         'pages' => ['services.residency', 'services.permanent-residency', 'services.ruc', 'services.banking', 'packages', 'process']],
+        ['heading' => 'Residency guides', 'pages' => ['guides.residency', 'guides.residency.requirements', 'guides.residency.documents', 'guides.residency.costs', 'guides.residency.timeline', 'guides.residency.temporary-vs-permanent', 'guides.residency.maintaining']],
+        ['heading' => 'Tax & banking',    'pages' => ['guides.tax', 'guides.tax.territorial', 'guides.tax.vs-legal', 'guides.tax.ruc', 'guides.banking']],
+        ['heading' => 'Paraguay',         'pages' => ['guides.living', 'guides.citizenship']],
+        ['heading' => 'Company',          'pages' => ['about', 'integrity', 'editorial-standards', 'faq', 'book']],
+        ['heading' => 'Legal',            'pages' => ['privacy', 'terms']],
     ],
 ];

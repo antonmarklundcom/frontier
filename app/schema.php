@@ -21,7 +21,7 @@ function schema_graph(array $page, array $crumbs): array
         '@id'   => $siteUrl . '/#organization',
         'name'  => site('name'),
         'url'   => $siteUrl . '/',
-        'description' => 'Guidance and local execution for Paraguay residency, tax registration and banking preparation.',
+        'description' => t('org_description'),
     ];
     $profiles = site('profiles', []);
     if (is_array($profiles) && $profiles !== []) {
@@ -37,7 +37,7 @@ function schema_graph(array $page, array $crumbs): array
         '@id'       => $siteUrl . '/#website',
         'url'       => $siteUrl . '/',
         'name'      => site('name'),
-        'inLanguage'=> 'en',
+        'inLanguage'=> locale_lang(locale()),
         'publisher' => ['@id' => $siteUrl . '/#organization'],
     ];
 
@@ -48,7 +48,7 @@ function schema_graph(array $page, array $crumbs): array
         'name'       => $page['title'],
         'description'=> $page['description'],
         'isPartOf'   => ['@id' => $siteUrl . '/#website'],
-        'inLanguage' => 'en',
+        'inLanguage' => locale_lang(locale()),
     ];
 
     if (count($crumbs) > 1) {
@@ -80,7 +80,7 @@ function schema_graph(array $page, array $crumbs): array
             'datePublished'   => $page['published'] ?? $page['last_reviewed'],
             'publisher'       => ['@id' => $siteUrl . '/#organization'],
             'mainEntityOfPage'=> ['@id' => url($page['url']) . '#webpage'],
-            'inLanguage'      => 'en',
+            'inLanguage'      => locale_lang(locale()),
         ];
         if ($author = real('founder')) {
             $article['author'] = ['@type' => 'Person', 'name' => $author];

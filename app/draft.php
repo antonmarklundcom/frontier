@@ -124,13 +124,14 @@ function preview_mode(): bool
  *
  * @return array{page:array,slots:list<array{path:string,brief:string}>}|null
  */
-function resolve_page(string $id): ?array
+function resolve_page(string $id, ?string $locale = null): ?array
 {
-    $meta = page($id);
+    $locale = $locale ?? locale();
+    $meta = page($id, $locale);
     if ($meta === null) {
         return null;
     }
-    $file = PF_APP . '/content/en/pages/' . str_replace('.', '-', $id) . '.php';
+    $file = PF_APP . '/content/' . $locale . '/pages/' . str_replace('.', '-', $id) . '.php';
     $content = is_file($file) ? require $file : [];
     $page = array_merge($meta, $content);
 

@@ -31,6 +31,7 @@ require PF_APP . '/helpers.php';
 // Installed before anything else can fail: from here on a web request that
 // throws renders the 500 page instead of a stack trace. See app/errors.php.
 require PF_APP . '/errors.php';
+require PF_APP . '/locale.php';
 require PF_APP . '/seo.php';
 require PF_APP . '/draft.php';
 require PF_APP . '/schema.php';

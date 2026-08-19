@@ -16,15 +16,30 @@ $ogImage   = og_image($page);
 <meta property="og:description" content="<?= e($page['description']) ?>">
 <meta property="og:url" content="<?= e($canonical) ?>">
 <meta property="og:image" content="<?= e($ogImage) ?>">
-<meta property="og:locale" content="en">
+<meta property="og:locale" content="<?= e(og_locale(locale())) ?>">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="<?= e($page['title']) ?>">
 <meta name="twitter:description" content="<?= e($page['description']) ?>">
 <meta name="twitter:image" content="<?= e($ogImage) ?>">
 
-<?php /* Spanish hreflang is intentionally absent: no /es/ page exists yet, and
-         advertising one that 404s is worse than having no alternate at all.
-         See docs/TRANSLATION-ARCHITECTURE.md for the switch-on procedure. */ ?>
+<?php
+/* hreflang emits itself. locale_alternates() returns the other locales in
+   which THIS page id is live — and only one locale is configured today, so it
+   returns nothing and not a single tag is printed. Advertising an alternate
+   that 404s, or that resolves to an in-preparation notice, is worse than
+   having no alternate at all; because the list is derived rather than
+   maintained, that cannot happen by omission.
+
+   Reciprocity is automatic: both sides derive their tags from the same
+   registries. See docs/TRANSLATION-ARCHITECTURE.md §5. */
+$alternates = locale_alternates($page['id'], locale());
+if ($alternates !== []):
+    foreach ($alternates as $altLocale => $altUrl): ?>
+<link rel="alternate" hreflang="<?= e(locale_lang($altLocale)) ?>" href="<?= e($altUrl) ?>">
+<?php endforeach; ?>
+<link rel="alternate" hreflang="<?= e(locale_lang(locale())) ?>" href="<?= e($canonical) ?>">
+<link rel="alternate" hreflang="x-default" href="<?= e(url(page_url($page['id'], default_locale()))) ?>">
+<?php endif; ?>
 
 <link rel="icon" href="<?= e(asset('assets/images/favicon.svg')) ?>" type="image/svg+xml">
 <link rel="manifest" href="/manifest.webmanifest">
