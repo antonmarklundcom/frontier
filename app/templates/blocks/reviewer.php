@@ -9,29 +9,22 @@
  */
 $key      = $b['reviewer_key'] ?? 'legal_reviewer';
 $reviewer = real($key);
-$kind     = $key === 'tax_reviewer' ? 'Paraguayan accountant' : 'Paraguayan lawyer';
+$kind     = t($key === 'tax_reviewer' ? 'reviewer_kind_accountant' : 'reviewer_kind_lawyer');
 $date     = $page['last_reviewed'] ?? null;
 ?>
 <section class="rev-sec">
   <div class="wrap">
     <div class="rev<?= e($reviewer ? '' : ' rev--pending') ?>">
-      <p class="rev__label"><?= e($reviewer ? 'Professional review' : 'Not yet reviewed') ?></p>
+      <p class="rev__label"><?= e(t($reviewer ? 'reviewer_label_reviewed' : 'reviewer_label_pending')) ?></p>
       <?php if ($reviewer): ?>
-        <p class="rev__body">
-          This page was reviewed by <strong><?= e($reviewer) ?></strong><?= raw_html($date ? ' on <time datetime="' . e($date) . '">' . e(review_date($date)) . '</time>' : '') ?>.
-          Review covers whether the procedure described matches current Paraguayan practice. It is not
-          advice on your own situation, and it does not make this page a substitute for engaging a
-          <?= e($kind) ?> on facts specific to you.
-        </p>
+        <p class="rev__body"><?= raw_html(t_format('reviewer_body_html',
+          '<strong>' . e($reviewer) . '</strong>',
+          $date ? ' on <time datetime="' . e($date) . '">' . e(review_date($date)) . '</time>' : '',
+          e($kind))) ?></p>
       <?php else: ?>
-        <p class="rev__body">
-          A <?= e($kind) ?> has not yet reviewed this page, so it is not published: it is excluded from
-          our sitemap and closed to search engines until that review happens. You are most likely reading
-          it because you were sent a preview link. Treat every factual claim on it as unverified.
-        </p>
+        <p class="rev__body"><?= e(t_format('reviewer_body_pending', $kind)) ?></p>
       <?php endif; ?>
-      <p class="rev__report">Found something wrong? Send us the URL and the sentence — corrections are
-        made in the page with the review date changed, never quietly.</p>
+      <p class="rev__report"><?= e(t('reviewer_report')) ?></p>
     </div>
   </div>
 </section>

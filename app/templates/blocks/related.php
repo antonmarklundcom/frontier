@@ -3,7 +3,7 @@
   <div class="wrap">
     <p class="eyebrow"><?= e(t('related_heading')) ?></p>
     <div class="related">
-      <?php foreach ($b['items'] as $item): $p = page($item['page']); ?>
+      <?php foreach ($b['items'] as $item): $p = page($item['page']); if (!$p) { continue; } ?>
         <a class="related__item" href="<?= e(href($p['url'])) ?>" data-ev="related_click" data-ev-loc="<?= e($p['id']) ?>">
           <h3><?= e($p['nav_label'] ?? $p['h1']) ?></h3>
           <p><?= e($item['note'] ?? $p['description']) ?></p>

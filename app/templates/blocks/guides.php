@@ -8,7 +8,7 @@
     </div>
     <div class="guides__panel" data-reveal="0">
       <div class="guides__list">
-        <?php foreach ($b['items'] as $item): $p = page($item['page']); ?>
+        <?php foreach ($b['items'] as $item): $p = page($item['page']); if (!$p) { continue; } ?>
           <a class="guides__item" href="<?= e(href($p['url'])) ?>" data-ev="guide_click" data-ev-loc="cornerstone">
             <h3><?= e($p['h1']) ?></h3>
             <p><?= e($item['summary']) ?></p>
