@@ -1,0 +1,44 @@
+#!/bin/sh
+# Paraguay Frontier — the validation gate, enforced.
+#
+# Runs tools/validate.php before anything leaves this machine. A push that
+# reaches GitHub has already passed lint, QA, the release build and the
+# sitemap freshness check.
+#
+# Installed by: php tools/install-hooks.php   (sets core.hooksPath=.githooks)
+# Emergency bypass: git push --no-verify      (see docs/VALIDATION.md)
+#
+# Deleting a remote branch pushes no commits, so there is nothing to validate.
+
+set -e
+
+# A delete-only push sends the all-zero sha as the local ref.
+only_deletes=1
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+    case "$local_sha" in
+        *[!0]*) only_deletes=0 ;;
+    esac
+done
+
+if [ "$only_deletes" -eq 1 ]; then
+    exit 0
+fi
+
+repo_root=$(git rev-parse --show-toplevel)
+
+if ! command -v php >/dev/null 2>&1; then
+    echo "pre-push: php is not on PATH, so the validation gate cannot run." >&2
+    echo "          Install PHP, or push with --no-verify and accept that" >&2
+    echo "          nothing was checked." >&2
+    exit 1
+fi
+
+echo "pre-push: running the validation gate (php tools/validate.php)"
+if php "$repo_root/tools/validate.php"; then
+    exit 0
+fi
+
+echo "" >&2
+echo "pre-push: push blocked — fix the failure above, or bypass with" >&2
+echo "          git push --no-verify (docs/VALIDATION.md explains the cost)." >&2
+exit 1
